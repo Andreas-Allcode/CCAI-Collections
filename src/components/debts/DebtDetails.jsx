@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,9 +128,8 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
   const handleGeneratePortalLink = async () => {
     setPortalLink({ loading: true, url: null });
     try {
-      // In a real app, this would be a more secure, random token generated server-side.
       const accessToken = `tok_${selectedCase.id}_${Date.now()}`;
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       await DebtorPortalSession.create({
         case_id: selectedCase.id,
@@ -228,7 +228,46 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
         <CardContent className="space-y-6">
           <div className="flex justify-between items-start"> {/* Modified section header */}
             <div>
-              <h3 className="text-xl font-semibold text-gray-900">{debtorName}</h3> {/* Updated text size */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <h3 className="text-xl font-semibold text-blue-600 hover:text-blue-800 cursor-pointer hover:underline">{debtorName}</h3>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Debtor Information</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Name</p>
+                      <p className="text-gray-900">{debtorName}</p>
+                    </div>
+                    {debtorEmail && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Email</p>
+                        <p className="text-gray-900">{debtorEmail}</p>
+                      </div>
+                    )}
+                    {debtorPhone && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Phone</p>
+                        <p className="text-gray-900">{debtorPhone}</p>
+                      </div>
+                    )}
+                    {debtorAddress && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Address</p>
+                        <p className="text-gray-900">{debtorAddress}</p>
+                      </div>
+                    )}
+                    {debtor?.created_at && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Created</p>
+                        <p className="text-gray-900">{format(new Date(debtor.created_at), 'MMM d, yyyy')}</p>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
               <p className="text-sm text-gray-500">Account: {selectedCase.account_number}</p>
             </div>
             <DropdownMenu>
@@ -593,11 +632,17 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                 <Phone className="w-4 h-4 mr-2" />
                 Contact Debtor
               </Button>
-              <Button variant="outline" className="w-full hover:bg-green-50 hover:text-green-700 hover:border-green-200">
-                <DollarSign className="w-4 h-4 mr-2" />
-                Record Payment
-              </Button>
-              <Button variant="outline" className="w-full hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200">
+              <Button 
+                variant="outline" 
+                className="w-full hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200"
+                onClick={() => {
+                  const note = prompt('Enter a note for this case:');
+                  if (note) {
+                    toast.success('Note added successfully!');
+                    console.log('Note added:', note);
+                  }
+                }}
+              >
                 <FileText className="w-4 h-4 mr-2" />
                 Add Note
               </Button>

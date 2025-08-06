@@ -1,19 +1,40 @@
-import { base44 } from './base44Client';
+import { supabase } from './supabaseClient';
 
+// Integration helpers using Supabase Edge Functions
+export const Core = {
+  InvokeLLM: async (data) => {
+    const { data: result, error } = await supabase.functions.invoke('invoke-llm', { body: data });
+    if (error) throw error;
+    return result;
+  },
+  SendEmail: async (data) => {
+    const { data: result, error } = await supabase.functions.invoke('send-email', { body: data });
+    if (error) throw error;
+    return result;
+  },
+  UploadFile: async (file, bucket = 'uploads') => {
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage.from(bucket).upload(fileName, file);
+    if (error) throw error;
+    return data;
+  },
+  GenerateImage: async (data) => {
+    const { data: result, error } = await supabase.functions.invoke('generate-image', { body: data });
+    if (error) throw error;
+    return result;
+  },
+  ExtractDataFromUploadedFile: async (data) => {
+    const { data: result, error } = await supabase.functions.invoke('extract-data-from-file', { body: data });
+    if (error) throw error;
+    return result;
+  }
+};
 
-
-
-export const Core = base44.integrations.Core;
-
-export const InvokeLLM = base44.integrations.Core.InvokeLLM;
-
-export const SendEmail = base44.integrations.Core.SendEmail;
-
-export const UploadFile = base44.integrations.Core.UploadFile;
-
-export const GenerateImage = base44.integrations.Core.GenerateImage;
-
-export const ExtractDataFromUploadedFile = base44.integrations.Core.ExtractDataFromUploadedFile;
+export const InvokeLLM = Core.InvokeLLM;
+export const SendEmail = Core.SendEmail;
+export const UploadFile = Core.UploadFile;
+export const GenerateImage = Core.GenerateImage;
+export const ExtractDataFromUploadedFile = Core.ExtractDataFromUploadedFile;
 
 
 

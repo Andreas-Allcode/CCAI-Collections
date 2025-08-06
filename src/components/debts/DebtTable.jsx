@@ -132,7 +132,12 @@ export default function DebtTable({
                                         {case_.status?.replace(/_/g, ' ') || 'unknown'}
                                     </Badge>
                                 </TableCell>
-                                <TableCell>{formatDistanceToNow(new Date(case_.updated_date), { addSuffix: true })}</TableCell>
+                                <TableCell>
+                                    {case_.updated_date ? 
+                                        formatDistanceToNow(new Date(case_.updated_date), { addSuffix: true }) : 
+                                        'No update'
+                                    }
+                                </TableCell>
                             </TableRow>
                         );
                     })}

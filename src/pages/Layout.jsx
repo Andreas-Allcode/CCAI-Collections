@@ -119,7 +119,6 @@ const allNavigationItems = [
     title: "Reports",
     url: createPageUrl("Reports"),
     icon: BarChart3,
-    adminOnly: true,
   },
   {
     title: "Integrations",
@@ -133,7 +132,6 @@ const allSettingsItems = [
     title: "Settings",
     url: createPageUrl("Settings"),
     icon: Settings,
-    adminOnly: true,
   },
 ];
 

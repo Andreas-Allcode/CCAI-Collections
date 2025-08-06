@@ -46,7 +46,7 @@ export default function CommunicationPanel({ caseData, debtor, onClose }) {
           Template.list(),
           getCCAiTemplates()
         ]);
-        const ccaiTemplates = ccaiRes.data || [];
+        const ccaiTemplates = ccaiRes?.data?.templates || [];
         setTemplates({ local: localTemplates || [], ccai: ccaiTemplates || [] });
       } catch (error) {
         console.error("Error fetching templates:", error);

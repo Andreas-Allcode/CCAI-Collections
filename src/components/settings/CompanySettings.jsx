@@ -36,7 +36,14 @@ export default function CompanySettings() {
   }, []);
   
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.id]: e.target.value });
+    const fieldMap = {
+      'company-name': 'company_name',
+      'company-address': 'address',
+      'company-phone': 'phone',
+      'company-email': 'email'
+    };
+    const field = fieldMap[e.target.id] || e.target.id;
+    setFormData({ ...formData, [field]: e.target.value });
   };
 
   const handleSave = async () => {
@@ -83,20 +90,20 @@ export default function CompanySettings() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="company_name">Company Name</Label>
-          <Input id="company_name" value={formData.company_name} onChange={handleChange} />
+          <Label htmlFor="company-name">Company Name</Label>
+          <Input id="company-name" value={formData.company_name} onChange={handleChange} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Input id="address" value={formData.address} onChange={handleChange} />
+          <Label htmlFor="company-address">Address</Label>
+          <Input id="company-address" value={formData.address} onChange={handleChange} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" value={formData.phone} onChange={handleChange} />
+          <Label htmlFor="company-phone">Phone</Label>
+          <Input id="company-phone" value={formData.phone} onChange={handleChange} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={formData.email} onChange={handleChange} />
+          <Label htmlFor="company-email">Email</Label>
+          <Input id="company-email" type="email" value={formData.email} onChange={handleChange} />
         </div>
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={isSaving}>

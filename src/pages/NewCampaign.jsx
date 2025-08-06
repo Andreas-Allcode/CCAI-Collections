@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowLeft, Send, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { getCCAiTemplates, createCCAiCampaign } from '@/api/functions/all';
+import { getCCAiTemplates, createCCAiCampaign } from "@/api/functions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

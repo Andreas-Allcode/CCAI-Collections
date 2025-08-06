@@ -169,13 +169,10 @@ export default function Debts() {
   };
 
   const handleExport = async () => {
-    if (selectedRowIds.length === 0) {
-      toast.info("Please select at least one debt to export.");
-      return;
-    }
+    const exportIds = selectedRowIds.length > 0 ? selectedRowIds : filteredCases.map(c => c.id);
     setIsExporting(true);
     try {
-      const { data, status } = await exportDebts({ case_ids: JSON.stringify(selectedRowIds) });
+      const { data, status } = await exportDebts({ case_ids: JSON.stringify(exportIds) });
       if (status !== 200) {
         throw new Error("Failed to fetch export data.");
       }
@@ -189,7 +186,7 @@ export default function Debts() {
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
-      toast.success(`${selectedRowIds.length} debts exported successfully!`);
+      toast.success(`${exportIds.length} debts exported successfully!`);
 
     } catch (error) {
       console.error("Export error:", error);
@@ -225,9 +222,9 @@ export default function Debts() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-3xl font-bold tracking-tight">Debts</h2>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleExport} disabled={isExporting || selectedRowIds.length === 0}>
+              <Button variant="outline" onClick={handleExport} disabled={isExporting}>
                 {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                Export {selectedRowIds.length > 0 ? `(${selectedRowIds.length})` : ''}
+                Export {selectedRowIds.length > 0 ? `(${selectedRowIds.length})` : 'All'}
               </Button>
               {canEdit && (
                 <>

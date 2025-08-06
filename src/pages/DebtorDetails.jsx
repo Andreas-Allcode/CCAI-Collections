@@ -112,9 +112,9 @@ export default function DebtorDetails() {
 
     return (
         <div className="p-6 md:p-8 space-y-6">
-            <Link to="/Debtors" className="flex items-center text-sm text-gray-600 hover:text-gray-900">
+            <Link to="/Debts" className="flex items-center text-sm text-gray-600 hover:text-gray-900">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to All Debtors
+                Back to Debts
             </Link>
 
             {isEditing ? (
@@ -160,51 +160,117 @@ export default function DebtorDetails() {
                         </CardContent>
                     </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium">Total Debts</CardTitle>
-                                <Briefcase className="w-4 h-4 text-gray-400"/>
+                            <CardHeader>
+                                <CardTitle>Financial Details</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{cases.length}</div>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <p className="text-sm text-gray-600">Original Creditor</p>
+                                    <p className="font-semibold">Wells Fargo</p>
+                                    <p className="text-sm text-gray-500">2222 Wells St, San Francisco, CA 94101</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-sm text-gray-600">Current Balance</p>
+                                        <p className="text-lg font-bold text-red-600">${totalBalance.toLocaleString()}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-600">Original Balance</p>
+                                        <p className="text-lg font-semibold">$12,000</p>
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
+                        
                         <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
-                                <DollarSign className="w-4 h-4 text-gray-400"/>
+                            <CardHeader>
+                                <CardTitle>Debt Timeline</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">${totalBalance.toLocaleString()}</div>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium">Active Debts</CardTitle>
-                                <BarChart3 className="w-4 h-4 text-gray-400"/>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{cases.filter(c => c.status === 'in_collection').length}</div>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <p className="text-sm text-gray-600">Days Since Charge Off</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-sm text-gray-500">Sep 21, 2023</span>
+                                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">684 days</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                        <span>Fresh (0-60)</span>
+                                        <span>Aging (61-90)</span>
+                                        <span>Stale (91-120)</span>
+                                        <span>Critical (121-180)</span>
+                                        <span>Urgent (180+)</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div className="bg-red-500 h-2 rounded-full" style={{width: '100%'}}></div>
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
                 </>
             )}
 
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Legal Information</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Assigned Attorney</span>
+                                <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded">Not Assigned</span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Portfolio</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <select className="w-full p-2 border rounded">
+                            <option>Quantum Financial ForwardFlow</option>
+                        </select>
+                    </CardContent>
+                </Card>
+            </div>
+            
             <Card>
                 <CardHeader>
-                    <CardTitle>All Debts for {debtor.name}</CardTitle>
+                    <CardTitle>Important Dates</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     <DebtTable
-                        cases={cases}
-                        portfolios={portfolios}
-                        isLoading={isLoading}
-                        onCaseSelect={() => {}}
-                        getStatusColor={getStatusColor}
-                        showDebtorName={false} // Don't need to show name since it's on this page
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center gap-3">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <div>
+                                <p className="text-sm text-gray-600">Charge Off</p>
+                                <p className="font-medium">Sep 21, 2023</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <div>
+                                <p className="text-sm text-gray-600">Last Payment</p>
+                                <p className="font-medium">Jul 17, 2023</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-gray-600">Recent charge-off, first contact pending</p>
                 </CardContent>
             </Card>
         </div>

@@ -66,21 +66,21 @@ export default function ProfileSettings() {
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
-          <Label htmlFor="fullName">Full Name</Label>
+          <Label htmlFor="profile-fullName">Full Name</Label>
           <Input
-            id="fullName"
+            id="profile-fullName"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Your full name"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" value={user?.email || ''} disabled />
+          <Label htmlFor="profile-email">Email</Label>
+          <Input id="profile-email" value={user?.email || ''} disabled />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="role">Role</Label>
-          <Input id="role" value={user?.role || ''} disabled className="capitalize"/>
+          <Label htmlFor="profile-role">Role</Label>
+          <Input id="profile-role" value={user?.role || ''} disabled className="capitalize"/>
         </div>
         <div className="flex justify-end">
           <Button onClick={handleSave} disabled={isSaving}>
