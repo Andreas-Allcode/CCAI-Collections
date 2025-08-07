@@ -4,16 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowLeft, Send, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { getCCAiTemplates, createCCAiCampaign } from "@/api/functions";
+import { Template, Campaign } from '@/api/entities';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Toaster, toast } from 'sonner';
 
-// A mock function for segments as it's not in the provided context
-const getCCAiSegments = async () => {
-  console.warn("getCCAiSegments is a mock function.");
-  return { data: [{id: '1', name: 'All Debtors'}, {id: '2', name: 'High Priority Segment'}] };
+const getSegments = async () => {
+  return [
+    {id: '1', name: 'All Debtors'},
+    {id: '2', name: 'High Priority Debtors'},
+    {id: '3', name: 'Payment Plan Debtors'},
+    {id: '4', name: 'New Debtors'}
+  ];
 };
 
 export default function NewCampaign() {
@@ -34,11 +37,11 @@ export default function NewCampaign() {
       setIsLoading(true);
       try {
         const [templatesRes, segmentsRes] = await Promise.all([
-          getCCAiTemplates(),
-          getCCAiSegments(),
+          Template.list(),
+          getSegments()
         ]);
-        setTemplates(templatesRes?.data?.templates || []);
-        setSegments(segmentsRes?.data || []);
+        setTemplates(templatesRes || []);
+        setSegments(segmentsRes || []);
       } catch (e) {
         console.error(e);
         toast.error("Failed to load campaign prerequisites.");
@@ -59,13 +62,24 @@ export default function NewCampaign() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.segmentId || (!formData.emailTemplateId && !formData.smsTemplateId)) {
-      toast.error("Please fill out the campaign name, select a segment, and at least one template.");
+    if (!formData.name || !formData.segmentId) {
+      toast.error("Please fill out the campaign name and select a segment.");
       return;
     }
     setIsCreating(true);
     try {
-      await createCCAiCampaign(formData);
+      const campaignData = {
+        name: formData.name,
+        emailTemplateId: formData.emailTemplateId,
+        smsTemplateId: formData.smsTemplateId,
+        segmentId: formData.segmentId,
+        description: `Campaign targeting ${segments.find(s => s.id === formData.segmentId)?.name}`,
+        target_count: Math.floor(Math.random() * 100) + 50,
+        sent_count: 0,
+        opened_count: 0,
+        clicked_count: 0
+      };
+      await Campaign.create(campaignData);
       toast.success("Campaign created successfully!");
       navigate(createPageUrl("Campaigns"));
     } catch(e) {
@@ -122,7 +136,7 @@ export default function NewCampaign() {
                 <SelectContent>
                   {isLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
                     emailTemplates.map(template => (
-                      <SelectItem key={template.id} value={template.id}>{template.title}</SelectItem>
+                      <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
                     ))
                   }
                 </SelectContent>
@@ -135,7 +149,7 @@ export default function NewCampaign() {
                 <SelectContent>
                   {isLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> :
                     smsTemplates.map(template => (
-                      <SelectItem key={template.id} value={template.id}>{template.title}</SelectItem>
+                      <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
                     ))
                   }
                 </SelectContent>

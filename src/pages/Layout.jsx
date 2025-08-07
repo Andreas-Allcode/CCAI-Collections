@@ -30,6 +30,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import usePermissions from "@/components/hooks/usePermissions";
@@ -177,7 +178,7 @@ export default function Layout({ children, currentPageName }) {
     <IterationErrorBoundary>
       <SidebarProvider>
         <div className="min-h-screen flex w-full bg-gray-50">
-          <Sidebar>
+          <Sidebar collapsible="icon">
             <SidebarContent>
               <SidebarGroup>
                 <SidebarGroupLabel>CCAI</SidebarGroupLabel>
@@ -225,7 +226,7 @@ export default function Layout({ children, currentPageName }) {
                       <AvatarImage src={`https://avatar.vercel.sh/${user?.email}`} alt={user?.full_name} />
                       <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
                       <p className="text-sm font-semibold text-gray-800 truncate">{user?.full_name || "Anonymous"}</p>
                       <p className="text-xs text-gray-500 truncate">{user?.email || ""}</p>
                   </div>
@@ -237,9 +238,12 @@ export default function Layout({ children, currentPageName }) {
           </Sidebar>
 
           <main className="flex-1 overflow-y-auto">
-              <IterationErrorBoundary>
-                {children}
-              </IterationErrorBoundary>
+            <div className="sticky top-0 z-10 bg-white border-b px-4 py-2">
+              <SidebarTrigger />
+            </div>
+            <IterationErrorBoundary>
+              {children}
+            </IterationErrorBoundary>
           </main>
         </div>
       </SidebarProvider>

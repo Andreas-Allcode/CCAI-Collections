@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Communication } from '@/api/entities';
 import { Payment } from '@/api/entities';
+import { ActivityLog } from '@/api/entities';
 import { 
   Loader2, 
   MessageSquare, 
@@ -88,18 +89,15 @@ export default function ActivityLogModal({ isOpen, onClose, caseId, debtorName }
   const fetchActivityLog = async () => {
     setIsLoading(true);
     try {
-      let [communications, payments] = await Promise.all([
+      let [communications, payments, activityLogs] = await Promise.all([
         Communication.filter({ case_id: caseId }, '-created_date'),
-        Payment.filter({ case_id: caseId }, '-payment_date')
+        Payment.filter({ case_id: caseId }, '-payment_date'),
+        ActivityLog.filter({ case_id: caseId }, '-activity_date')
       ]);
 
-      // Generate fake data if real data is empty
-      if (communications.length === 0) {
-        communications = generateFakeCommunications(caseId, debtorName);
-      }
-      if (payments.length === 0) {
-        payments = generateFakePayments(caseId);
-      }
+      // Debug: Log the fetched data
+      console.log('Fetched activity logs:', activityLogs);
+      console.log('Case ID:', caseId);
 
       // Combine all activities with unified structure
       const allActivities = [
@@ -136,28 +134,24 @@ export default function ActivityLogModal({ isOpen, onClose, caseId, debtorName }
           },
           icon: DollarSign,
           color: 'green'
+        })),
+        ...activityLogs.map(log => ({
+          id: `activity_${log.id}`,
+          type: 'activity',
+          subType: log.activity_type,
+          timestamp: log.activity_date,
+          title: log.description,
+          description: log.metadata ? JSON.parse(log.metadata).event || '' : '',
+          details: {
+            performedBy: log.performed_by,
+            metadata: log.metadata
+          },
+          icon: log.activity_type === 'debt_validation_sent' ? Send : UserCheck,
+          color: 'orange'
         }))
       ];
 
-      // Add mock status change events (in a real app, these would come from an audit log)
-      const statusChanges = [
-        {
-          id: 'status_1',
-          type: 'status_change',
-          timestamp: subDays(new Date(), 5).toISOString(),
-          title: 'Status Updated',
-          description: 'Status changed to In Collection',
-          details: {
-            fromStatus: 'new',
-            toStatus: 'in_collection',
-            changedBy: 'system'
-          },
-          icon: UserCheck,
-          color: 'purple'
-        }
-      ];
-
-      allActivities.push(...statusChanges);
+      console.log('All activities:', allActivities);
       setActivities(allActivities);
     } catch (error) {
       console.error("Error fetching activity log:", error);
@@ -250,7 +244,7 @@ export default function ActivityLogModal({ isOpen, onClose, caseId, debtorName }
               <SelectItem value="all">All Events</SelectItem>
               <SelectItem value="communication">Communications</SelectItem>
               <SelectItem value="payment">Payments</SelectItem>
-              <SelectItem value="status_change">Status Changes</SelectItem>
+              <SelectItem value="activity">Activity Log</SelectItem>
             </SelectContent>
           </Select>
           <Button

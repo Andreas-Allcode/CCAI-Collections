@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Communication, Template, Case } from '@/api/entities';
+import { Communication, Template, Case, Debtor } from '@/api/entities';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,8 @@ import { createPageUrl } from '@/utils';
 export default function Communications() {
   const [communications, setCommunications] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [cases, setCases] = useState([]);
+  const [debtors, setDebtors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -36,12 +38,16 @@ export default function Communications() {
 
   const loadData = async () => {
     try {
-      const [commsRes, tempsRes] = await Promise.all([
+      const [commsRes, tempsRes, casesRes, debtorsRes] = await Promise.all([
         Communication.list('-sent_date'),
-        Template.list()
+        Template.list(),
+        Case.list(),
+        Debtor.list()
       ]);
       setCommunications(commsRes || []);
       setTemplates(tempsRes || []);
+      setCases(casesRes || []);
+      setDebtors(debtorsRes || []);
     } catch (error) {
       console.error('Error loading communications:', error);
     } finally {
@@ -49,9 +55,20 @@ export default function Communications() {
     }
   };
 
+  const getDebtorName = (caseId) => {
+    const case_ = cases.find(c => c.id === caseId);
+    if (case_?.debtor_id) {
+      const debtor = debtors.find(d => d.id === case_.debtor_id);
+      return debtor?.name || case_.debtor_name;
+    }
+    return case_?.debtor_name || 'Unknown';
+  };
+
   const filteredCommunications = (communications || []).filter(comm => {
+    const debtorName = getDebtorName(comm.case_id);
     const matchesSearch = comm.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         comm.content?.toLowerCase().includes(searchTerm.toLowerCase());
+                         comm.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         debtorName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || comm.type === filterType;
     return matchesSearch && matchesType;
   });
@@ -211,6 +228,7 @@ export default function Communications() {
                   <TableRow>
                     <TableHead>Type</TableHead>
                     <TableHead>Subject/Content</TableHead>
+                    <TableHead>Debtor</TableHead>
                     <TableHead>Case ID</TableHead>
                     <TableHead>Sent Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -227,11 +245,12 @@ export default function Communications() {
                         <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                         <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                         <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
+                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredCommunications.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
+                      <TableCell colSpan={7} className="text-center py-8">
                         <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500">No communications found</p>
                       </TableCell>
@@ -252,6 +271,9 @@ export default function Communications() {
                               {comm.content?.substring(0, 50)}...
                             </p>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-sm">{getDebtorName(comm.case_id)}</span>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{comm.case_id}</Badge>

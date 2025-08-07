@@ -8,10 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { User, Mail, Phone, MapPin, ArrowLeft, Edit, Hash, Briefcase, FileText, DollarSign, BarChart3, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
+import { User, Mail, Phone, MapPin, ArrowLeft, Edit, Hash, Briefcase, FileText, DollarSign, BarChart3, Calendar, MessageSquare, Send, Clock, LinkIcon, Copy, Loader2 } from 'lucide-react';
+import { format, differenceInDays } from 'date-fns';
 import DebtorForm from '../components/debtors/DebtorForm';
 import DebtTable from '../components/debts/DebtTable';
+import ActivityLogModal from '../components/debts/ActivityLogModal';
+import CommunicationPanel from '../components/debts/CommunicationPanel';
+import { DebtorPortalSession } from '@/api/entities';
+import { createPageUrl } from '@/utils';
+import { Input } from '@/components/ui/input';
 
 export default function DebtorDetails() {
     const location = useLocation();
@@ -21,6 +26,9 @@ export default function DebtorDetails() {
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [debtorId, setDebtorId] = useState(null);
+    const [showActivityLog, setShowActivityLog] = useState(false);
+    const [showCommunications, setShowCommunications] = useState(false);
+    const [portalLink, setPortalLink] = useState(null);
 
     const mockImportData = [
         {
@@ -80,6 +88,35 @@ export default function DebtorDetails() {
         if(debtorId) loadData(debtorId);
     };
 
+    const handleGeneratePortalLink = async () => {
+        if (!primaryCase) return;
+        setPortalLink({ loading: true, url: null });
+        try {
+            const accessToken = `tok_${primaryCase.id}_${Date.now()}`;
+            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+            await DebtorPortalSession.create({
+                case_id: primaryCase.id,
+                access_token: accessToken,
+                expires_at: expiresAt.toISOString(),
+                is_active: true
+            });
+            
+            const url = `${window.location.origin}${createPageUrl(`PaymentPortal?token=${accessToken}`)}`;
+            setPortalLink({ loading: false, url: url });
+            toast.success("Portal link generated successfully!");
+        } catch (error) {
+            console.error("Error generating portal link", error);
+            toast.error("Failed to generate portal link.");
+            setPortalLink(null);
+        }
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        toast.info("Link copied to clipboard!");
+    };
+
     const getStatusColor = (status) => {
         const colors = {
             new: "bg-blue-50 text-blue-700 border-blue-200",
@@ -109,6 +146,27 @@ export default function DebtorDetails() {
     }
     
     const totalBalance = cases.reduce((sum, c) => sum + (c.current_balance || 0), 0);
+    const totalOriginalBalance = cases.reduce((sum, c) => sum + (c.original_balance || 0), 0);
+    
+    // Get the primary case for timeline and creditor info
+    const primaryCase = cases.length > 0 ? cases[0] : null;
+    
+    const getCaseAge = () => {
+        if (!primaryCase?.charge_off_date) return null;
+        const chargeOffDate = new Date(primaryCase.charge_off_date);
+        const today = new Date();
+        return differenceInDays(today, chargeOffDate);
+    };
+    
+    const getAgeColor = (days) => {
+        if (days <= 60) return "bg-green-100 text-green-800";
+        if (days <= 90) return "bg-yellow-100 text-yellow-800";
+        if (days <= 120) return "bg-orange-100 text-orange-800";
+        if (days <= 150) return "bg-red-100 text-red-800";
+        return "bg-red-200 text-red-900";
+    };
+    
+    const caseAge = getCaseAge();
 
     return (
         <div className="p-6 md:p-8 space-y-6">
@@ -166,11 +224,15 @@ export default function DebtorDetails() {
                                 <CardTitle>Financial Details</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div>
-                                    <p className="text-sm text-gray-600">Original Creditor</p>
-                                    <p className="font-semibold">Wells Fargo</p>
-                                    <p className="text-sm text-gray-500">2222 Wells St, San Francisco, CA 94101</p>
-                                </div>
+                                {primaryCase?.original_creditor && (
+                                    <div>
+                                        <p className="text-sm text-gray-600">Original Creditor</p>
+                                        <p className="font-semibold">{primaryCase.original_creditor}</p>
+                                        {primaryCase.original_creditor_address && (
+                                            <p className="text-sm text-gray-500">{primaryCase.original_creditor_address}</p>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <p className="text-sm text-gray-600">Current Balance</p>
@@ -178,7 +240,7 @@ export default function DebtorDetails() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-600">Original Balance</p>
-                                        <p className="text-lg font-semibold">$12,000</p>
+                                        <p className="text-lg font-semibold">${totalOriginalBalance.toLocaleString()}</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -189,25 +251,44 @@ export default function DebtorDetails() {
                                 <CardTitle>Debt Timeline</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div>
-                                    <p className="text-sm text-gray-600">Days Since Charge Off</p>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-sm text-gray-500">Sep 21, 2023</span>
-                                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-medium">684 days</span>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs text-gray-500">
-                                        <span>Fresh (0-60)</span>
-                                        <span>Aging (61-90)</span>
-                                        <span>Stale (91-120)</span>
-                                        <span>Critical (121-180)</span>
-                                        <span>Urgent (180+)</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                        <div className="bg-red-500 h-2 rounded-full" style={{width: '100%'}}></div>
-                                    </div>
-                                </div>
+                                {caseAge !== null && primaryCase?.charge_off_date ? (
+                                    <>
+                                        <div>
+                                            <p className="text-sm text-gray-600">Days Since Charge Off</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-sm text-gray-500">
+                                                    {format(new Date(primaryCase.charge_off_date), 'MMM d, yyyy')}
+                                                </span>
+                                                <span className={`${getAgeColor(caseAge)} px-2 py-1 rounded text-sm font-medium`}>
+                                                    {caseAge} days
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span>Fresh (0-60)</span>
+                                                <span>Aging (61-90)</span>
+                                                <span>Stale (91-120)</span>
+                                                <span>Critical (121-150)</span>
+                                                <span>Urgent (150+)</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                                <div className="h-full bg-gradient-to-r from-green-400 via-yellow-400 via-orange-400 to-red-500"></div>
+                                            </div>
+                                            <div className="mt-1 text-center">
+                                                <div
+                                                    className="w-3 h-3 bg-gray-800 rounded-full mx-auto transform -translate-y-1"
+                                                    style={{
+                                                        marginLeft: `${Math.min((caseAge / 180) * 100, 100)}%`,
+                                                        transform: 'translateX(-50%) translateY(-4px)'
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-gray-500">No charge off date available</p>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -247,32 +328,113 @@ export default function DebtorDetails() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex items-center gap-3">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <div>
-                                <p className="text-sm text-gray-600">Charge Off</p>
-                                <p className="font-medium">Sep 21, 2023</p>
+                        {primaryCase?.charge_off_date && (
+                            <div className="flex items-center gap-3">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <div>
+                                    <p className="text-sm text-gray-600">Charge Off</p>
+                                    <p className="font-medium">{format(new Date(primaryCase.charge_off_date), 'MMM d, yyyy')}</p>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            <div>
-                                <p className="text-sm text-gray-600">Last Payment</p>
-                                <p className="font-medium">Jul 17, 2023</p>
+                        )}
+                        {primaryCase?.last_payment_date && (
+                            <div className="flex items-center gap-3">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <div>
+                                    <p className="text-sm text-gray-600">Last Payment</p>
+                                    <p className="font-medium">{format(new Date(primaryCase.last_payment_date), 'MMM d, yyyy')}</p>
+                                </div>
                             </div>
-                        </div>
+                        )}
+                        {!primaryCase?.charge_off_date && !primaryCase?.last_payment_date && (
+                            <p className="text-sm text-gray-500 col-span-2">No important dates available</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
             
+            {primaryCase?.notes && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Notes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-gray-600">{primaryCase.notes}</p>
+                    </CardContent>
+                </Card>
+            )}
+            
             <Card>
                 <CardHeader>
-                    <CardTitle>Notes</CardTitle>
+                    <CardTitle>Communication & Tools</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-gray-600">Recent charge-off, first contact pending</p>
+                <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setShowActivityLog(true)} className="flex-1" disabled={!primaryCase}>
+                            <Clock className="w-4 h-4 mr-2" /> Activity Log
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleGeneratePortalLink} disabled={portalLink?.loading || !primaryCase} className="flex-1">
+                            {portalLink?.loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LinkIcon className="w-4 h-4 mr-2" />}
+                            Generate Portal Link
+                        </Button>
+                    </div>
+
+                    {portalLink && !portalLink.loading && portalLink.url && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p className="text-sm font-medium text-blue-800">Secure Debtor Portal Link:</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <Input value={portalLink.url} readOnly className="text-xs h-8"/>
+                                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(portalLink.url)}>
+                                    <Copy className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <Button
+                            variant="outline"
+                            className="w-full hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                            onClick={() => setShowCommunications(true)}
+                            disabled={!primaryCase}
+                        >
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Send Communication
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="w-full hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                            onClick={() => {
+                                const note = prompt('Enter a note for this debtor:');
+                                if (note) {
+                                    toast.success('Note added successfully!');
+                                    console.log('Note added:', note);
+                                }
+                            }}
+                        >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Add Note
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
+            
+            {showActivityLog && primaryCase && (
+                <ActivityLogModal
+                    isOpen={showActivityLog}
+                    onClose={() => setShowActivityLog(false)}
+                    caseId={primaryCase.id}
+                    debtorName={debtor.name}
+                />
+            )}
+            
+            {showCommunications && primaryCase && (
+                <CommunicationPanel
+                    caseData={primaryCase}
+                    debtor={debtor}
+                    onClose={() => setShowCommunications(false)}
+                />
+            )}
         </div>
     );
 }

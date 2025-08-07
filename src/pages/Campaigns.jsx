@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getCCAiCampaigns } from '@/api/functions';
+import { Campaign } from '@/api/entities';
 import { Plus, Send, Eye, BarChart2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -15,7 +15,7 @@ export default function Campaigns() {
   useEffect(() => {
     const fetchCampaigns = async () => {
       try {
-        const { data } = await getCCAiCampaigns();
+        const data = await Campaign.list();
         setCampaigns(data || []);
       } catch (error) {
         console.error("Error fetching campaigns:", error);
@@ -29,6 +29,7 @@ export default function Campaigns() {
   const getStatusColor = (status) => {
     const colors = {
       draft: "bg-gray-100 text-gray-800",
+      active: "bg-green-100 text-green-800",
       sent: "bg-green-100 text-green-800",
       sending: "bg-blue-100 text-blue-800",
       archived: "bg-yellow-100 text-yellow-800",
@@ -67,14 +68,24 @@ export default function Campaigns() {
             <Card key={campaign.id} className="flex flex-col">
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{campaign.title}</CardTitle>
+                  <CardTitle className="text-lg">{campaign.name}</CardTitle>
                   <Badge className={getStatusColor(campaign.status)}>{campaign.status}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-sm text-gray-600 line-clamp-2">
-                  Subject: {campaign.subject}
+                  {campaign.description || 'No description available'}
                 </p>
+                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Target:</span>
+                    <span className="ml-1 font-medium">{campaign.target_count || 0}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Sent:</span>
+                    <span className="ml-1 font-medium">{campaign.sent_count || 0}</span>
+                  </div>
+                </div>
               </CardContent>
               <div className="p-6 pt-0 flex gap-2">
                  <Button variant="outline" size="sm" className="w-full">

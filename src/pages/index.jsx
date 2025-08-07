@@ -44,6 +44,8 @@ import NewTemplate from "./NewTemplate";
 
 import DebtImport from "./DebtImport";
 
+import TestActivityLog from "./TestActivityLog";
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const PAGES = {
@@ -91,6 +93,8 @@ const PAGES = {
     NewTemplate: NewTemplate,
     
     DebtImport: DebtImport,
+    
+    TestActivityLog: TestActivityLog,
     
 }
 
@@ -162,6 +166,8 @@ function PagesContent() {
                 <Route path="/NewTemplate" element={<NewTemplate />} />
                 
                 <Route path="/DebtImport" element={<DebtImport />} />
+                
+                <Route path="/TestActivityLog" element={<TestActivityLog />} />
                 
             </Routes>
         </Layout>

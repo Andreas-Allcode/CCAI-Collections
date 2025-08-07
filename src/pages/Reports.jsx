@@ -93,15 +93,27 @@ export default function Reports() {
   };
 
   const getCollectionTrend = () => {
-    // Generate mock trend data since we have limited payment data
-    return [
-      { month: 'Aug 2024', collected: 45000, count: 12 },
-      { month: 'Sep 2024', collected: 52000, count: 15 },
-      { month: 'Oct 2024', collected: 38000, count: 10 },
-      { month: 'Nov 2024', collected: 61000, count: 18 },
-      { month: 'Dec 2024', collected: 47000, count: 13 },
-      { month: 'Jan 2025', collected: 55000, count: 16 }
-    ];
+    const { filteredPayments } = getFilteredData();
+    const completedPayments = (filteredPayments || []).filter(p => p.status === 'completed');
+    
+    // Group payments by month
+    const monthlyData = {};
+    completedPayments.forEach(payment => {
+      if (payment.payment_date) {
+        const date = new Date(payment.payment_date);
+        const monthKey = format(date, 'MMM yyyy');
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { collected: 0, count: 0 };
+        }
+        monthlyData[monthKey].collected += payment.amount || 0;
+        monthlyData[monthKey].count += 1;
+      }
+    });
+    
+    // Convert to array and sort by date
+    return Object.entries(monthlyData)
+      .map(([month, data]) => ({ month, ...data }))
+      .sort((a, b) => new Date(a.month) - new Date(b.month));
   };
 
   const getStatusDistribution = () => {
@@ -116,15 +128,7 @@ export default function Reports() {
       value
     }));
 
-    // Return mock data if no real data
-    return distribution.length > 0 ? distribution : [
-      { name: 'new', value: 2 },
-      { name: 'in collection', value: 1 },
-      { name: 'payment plan', value: 1 },
-      { name: 'paid', value: 1 },
-      { name: 'settled', value: 1 },
-      { name: 'legal action', value: 1 }
-    ];
+    return distribution;
   };
 
   const getPortfolioPerformance = () => {
@@ -153,8 +157,8 @@ export default function Reports() {
         original_creditor: portfolio.original_creditor,
         portfolio_type: portfolio.portfolio_type,
         total_face_value: portfolio.total_face_value,
-        collected: totalCollected || (Math.random() * 50000 + 10000), // Add mock collected amount
-        collectionRate: collectionRate || (Math.random() * 30 + 10),
+        collected: totalCollected,
+        collectionRate: collectionRate,
         cases: totalCases,
         bankruptcyPercent: Math.round(bankruptcyPercent * 100) / 100,
         deceasedPercent: Math.round(deceasedPercent * 100) / 100,
@@ -569,10 +573,8 @@ export default function Reports() {
                     const totalComms = Math.max((communications || []).length, 1);
                     const percentage = (count / totalComms) * 100;
                     
-                    // Add mock data if no real communications
-                    const mockCounts = { email: 15, sms: 8, call: 5, letter: 2 };
-                    const displayCount = count > 0 ? count : mockCounts[type] || 0;
-                    const displayPercentage = count > 0 ? percentage : (mockCounts[type] / 30) * 100;
+                    const displayCount = count;
+                    const displayPercentage = percentage;
                     
                     return (
                       <div key={type} className="space-y-2">
@@ -583,7 +585,7 @@ export default function Reports() {
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
                             className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${displayPercentage}%` }}
+                            style={{ width: `${Math.min(displayPercentage, 100)}%` }}
                           />
                         </div>
                       </div>
