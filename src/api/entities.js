@@ -135,6 +135,9 @@ const getDefaultMockData = () => ({
   ]
 });
 
+// Check if we're in development (localhost)
+const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
 // Initialize mock data from localStorage
 let mockData = loadMockData();
 
@@ -160,102 +163,28 @@ const createEntity = (tableName) => ({
     return data;
   },
   create: async (data) => {
-    // For portal sessions, store in localStorage for demo
-    if (tableName === 'debtor_portal_sessions') {
-      const newRecord = {
-        id: Date.now().toString(),
-        ...data,
-        created_at: new Date().toISOString()
-      };
-      const sessions = JSON.parse(localStorage.getItem('portal_sessions') || '[]');
-      sessions.push(newRecord);
-      localStorage.setItem('portal_sessions', JSON.stringify(sessions));
-      return newRecord;
-    }
-    
-    // For cases, add activity logging
-    if (tableName === 'cases') {
+    if (isDevelopment) {
+      // Use localStorage for localhost development
       const newRecord = {
         id: Date.now().toString(),
         ...data,
         created_at: new Date().toISOString()
       };
       
-      // Add to mock data
-      mockData.cases.push(newRecord);
-      
-      // Save to localStorage for persistence
-      saveMockData(mockData);
-      
-      // Create activity log entries
-      const now = new Date().toISOString();
-      
-      // Account Created entry
-      const accountCreatedLog = {
-        id: `log_${Date.now()}_1`,
-        case_id: newRecord.id,
-        activity_type: 'debt_validation_sent',
-        description: 'Account Created',
-        performed_by: 'system',
-        activity_date: now,
-        metadata: JSON.stringify({ event: 'account_created' }),
-        created_at: now
-      };
-      
-      // DVN Sent entry (slightly after account creation)
-      const dvnSentLog = {
-        id: `log_${Date.now()}_2`,
-        case_id: newRecord.id,
-        activity_type: 'debt_validation_sent',
-        description: 'DVN was sent',
-        performed_by: 'system',
-        activity_date: new Date(Date.now() + 1000).toISOString(),
-        metadata: JSON.stringify({ event: 'dvn_sent', method: 'automated' }),
-        created_at: new Date(Date.now() + 1000).toISOString()
-      };
-      
-      mockData.activity_logs.push(accountCreatedLog, dvnSentLog);
-      
-      // Save to localStorage
-      saveMockData(mockData);
-      
-      return newRecord;
-    }
-    
-    // For campaigns, add with default metrics
-    if (tableName === 'campaigns') {
-      const newRecord = {
-        id: Date.now().toString(),
-        ...data,
-        status: data.status || 'active',
-        target_count: data.target_count || 0,
-        sent_count: data.sent_count || 0,
-        opened_count: data.opened_count || 0,
-        clicked_count: data.clicked_count || 0,
-        created_at: new Date().toISOString()
-      };
-      
-      mockData.campaigns.push(newRecord);
-      saveMockData(mockData);
-      return newRecord;
-    }
-    
-    // For other entities, try Supabase but fall back to mock
-    try {
-      const { data: result, error } = await supabase.from(tableName).insert([data]).select().single();
-      if (error) throw error;
-      return result;
-    } catch (error) {
-      console.log(`Mock create for ${tableName}:`, data);
-      const newRecord = {
-        id: Date.now().toString(),
-        ...data,
-        created_at: new Date().toISOString()
-      };
       mockData[tableName] = mockData[tableName] || [];
       mockData[tableName].push(newRecord);
       saveMockData(mockData);
       return newRecord;
+    } else {
+      // Use Supabase for production
+      try {
+        const { data: result, error } = await supabase.from(tableName).insert([data]).select().single();
+        if (error) throw error;
+        return result;
+      } catch (error) {
+        console.error(`Supabase create failed for ${tableName}:`, error);
+        throw error;
+      }
     }
   },
   update: async (id, data) => {
@@ -285,30 +214,57 @@ const createEntity = (tableName) => ({
     return data;
   },
   list: async (orderBy) => {
-    let data = [...(mockData[tableName] || [])];
-    
-    // Handle ordering if provided
-    if (typeof orderBy === 'string' && orderBy.length > 0) {
-      const isDescending = orderBy.startsWith('-');
-      let column = isDescending ? orderBy.substring(1) : orderBy;
+    if (isDevelopment) {
+      // Use localStorage for localhost development
+      let data = [...(mockData[tableName] || [])];
       
-      // Map column variations
-      const columnMap = {
-        'created_date': 'created_at',
-        'updated_date': 'created_at',
-        'updated_at': 'created_at'
-      };
-      column = columnMap[column] || column;
+      if (typeof orderBy === 'string' && orderBy.length > 0) {
+        const isDescending = orderBy.startsWith('-');
+        let column = isDescending ? orderBy.substring(1) : orderBy;
+        
+        const columnMap = {
+          'created_date': 'created_at',
+          'updated_date': 'created_at',
+          'updated_at': 'created_at'
+        };
+        column = columnMap[column] || column;
+        
+        data.sort((a, b) => {
+          const aVal = a[column] || '';
+          const bVal = b[column] || '';
+          const comparison = aVal.localeCompare(bVal);
+          return isDescending ? -comparison : comparison;
+        });
+      }
       
-      data.sort((a, b) => {
-        const aVal = a[column] || '';
-        const bVal = b[column] || '';
-        const comparison = aVal.localeCompare(bVal);
-        return isDescending ? -comparison : comparison;
-      });
+      return data;
+    } else {
+      // Use Supabase for production
+      try {
+        let query = supabase.from(tableName).select('*');
+        
+        if (typeof orderBy === 'string' && orderBy.length > 0) {
+          const isDescending = orderBy.startsWith('-');
+          let column = isDescending ? orderBy.substring(1) : orderBy;
+          
+          const columnMap = {
+            'created_date': 'created_at',
+            'updated_date': 'created_at',
+            'updated_at': 'created_at'
+          };
+          column = columnMap[column] || column;
+          
+          query = query.order(column, { ascending: !isDescending });
+        }
+        
+        const { data, error } = await query;
+        if (error) throw error;
+        return data || [];
+      } catch (error) {
+        console.error(`Supabase list failed for ${tableName}:`, error);
+        return [];
+      }
     }
-    
-    return data;
   },
   filter: async (filters = {}, orderBy) => {
     let mockResult = mockData[tableName] || [];
@@ -365,27 +321,25 @@ const createEntity = (tableName) => ({
   schema: () => schemas[tableName] || { properties: {} },
 
   delete: async (id) => {
-    if (tableName === 'cases') {
-      // Remove from mock data
-      const index = mockData.cases.findIndex(item => item.id === id);
+    if (isDevelopment) {
+      // Use localStorage for localhost development
+      const index = mockData[tableName]?.findIndex(item => item.id === id);
       if (index !== -1) {
-        mockData.cases.splice(index, 1);
+        mockData[tableName].splice(index, 1);
         saveMockData(mockData);
-        console.log(`Deleted case ${id} from mock data`);
-      } else {
-        console.log(`Case ${id} not found in mock data, but treating as successful delete`);
+        console.log(`Deleted ${tableName} ${id} from localStorage`);
       }
       return true;
-    }
-    
-    // For other entities, try Supabase first
-    try {
-      const { error } = await supabase.from(tableName).delete().eq('id', id);
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.log(`Mock delete for ${tableName}:`, id);
-      return true;
+    } else {
+      // Use Supabase for production
+      try {
+        const { error } = await supabase.from(tableName).delete().eq('id', id);
+        if (error) throw error;
+        return true;
+      } catch (error) {
+        console.error(`Supabase delete failed for ${tableName}:`, error);
+        throw error;
+      }
     }
   },
   get: async (id) => {

@@ -18,13 +18,15 @@ import {
   Edit,
   Eye,
   Filter,
-  Upload
+  Upload,
+  Trash2
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import VendorForm from '../components/vendors/VendorForm';
 import VendorDetails from '../components/vendors/VendorDetails';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { toast } from 'sonner';
 
 export default function Vendors() {
   const [vendors, setVendors] = useState([]);
@@ -106,6 +108,23 @@ export default function Vendors() {
     setIsDetailsOpen(true);
   };
 
+  const handleDeleteVendor = async (vendor) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete ${vendor.name}?\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    try {
+      await Vendor.delete(vendor.id);
+      loadVendors();
+      toast.success("Vendor deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      toast.error("Failed to delete vendor.");
+    }
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
@@ -128,7 +147,7 @@ export default function Vendors() {
                 Add Vendor
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Vendor</DialogTitle>
               </DialogHeader>
@@ -312,6 +331,14 @@ export default function Vendors() {
                             <Globe className="w-4 h-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteVendor(vendor)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
