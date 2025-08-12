@@ -138,6 +138,31 @@ const getDefaultMockData = () => ({
 // Check if we're in development (localhost)
 const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
+// Function to populate Supabase with mock data if empty
+const populateSupabaseIfEmpty = async (tableName) => {
+  if (isDevelopment) return; // Skip for localhost
+  
+  try {
+    const { data, error } = await supabase.from(tableName).select('id').limit(1);
+    if (error) throw error;
+    
+    // If table is empty, populate with mock data
+    if (!data || data.length === 0) {
+      const mockTableData = getDefaultMockData()[tableName];
+      if (mockTableData && mockTableData.length > 0) {
+        const { error: insertError } = await supabase.from(tableName).insert(mockTableData);
+        if (insertError) {
+          console.error(`Failed to populate ${tableName}:`, insertError);
+        } else {
+          console.log(`Populated ${tableName} with ${mockTableData.length} records`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Error checking/populating ${tableName}:`, error);
+  }
+};
+
 // Initialize mock data from localStorage
 let mockData = loadMockData();
 
@@ -163,8 +188,15 @@ const createEntity = (tableName) => ({
     return data;
   },
   create: async (data) => {
-    if (isDevelopment) {
-      // Use localStorage for localhost development
+    // Try Supabase first (for CloudFront), fallback to localStorage (for localhost)
+    try {
+      const { data: result, error } = await supabase.from(tableName).insert([data]).select().single();
+      if (error) throw error;
+      return result;
+    } catch (error) {
+      console.log(`Supabase failed for ${tableName}, using localStorage:`, error.message);
+      
+      // Fallback to localStorage
       const newRecord = {
         id: Date.now().toString(),
         ...data,
@@ -175,16 +207,6 @@ const createEntity = (tableName) => ({
       mockData[tableName].push(newRecord);
       saveMockData(mockData);
       return newRecord;
-    } else {
-      // Use Supabase for production
-      try {
-        const { data: result, error } = await supabase.from(tableName).insert([data]).select().single();
-        if (error) throw error;
-        return result;
-      } catch (error) {
-        console.error(`Supabase create failed for ${tableName}:`, error);
-        throw error;
-      }
     }
   },
   update: async (id, data) => {
@@ -214,8 +236,31 @@ const createEntity = (tableName) => ({
     return data;
   },
   list: async (orderBy) => {
-    if (isDevelopment) {
-      // Use localStorage for localhost development
+    // Try Supabase first (for CloudFront), fallback to localStorage (for localhost)
+    try {
+      let query = supabase.from(tableName).select('*');
+      
+      if (typeof orderBy === 'string' && orderBy.length > 0) {
+        const isDescending = orderBy.startsWith('-');
+        let column = isDescending ? orderBy.substring(1) : orderBy;
+        
+        const columnMap = {
+          'created_date': 'created_at',
+          'updated_date': 'created_at',
+          'updated_at': 'created_at'
+        };
+        column = columnMap[column] || column;
+        
+        query = query.order(column, { ascending: !isDescending });
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.log(`Supabase failed for ${tableName}, using localStorage:`, error.message);
+      
+      // Fallback to localStorage
       let data = [...(mockData[tableName] || [])];
       
       if (typeof orderBy === 'string' && orderBy.length > 0) {
@@ -238,32 +283,6 @@ const createEntity = (tableName) => ({
       }
       
       return data;
-    } else {
-      // Use Supabase for production
-      try {
-        let query = supabase.from(tableName).select('*');
-        
-        if (typeof orderBy === 'string' && orderBy.length > 0) {
-          const isDescending = orderBy.startsWith('-');
-          let column = isDescending ? orderBy.substring(1) : orderBy;
-          
-          const columnMap = {
-            'created_date': 'created_at',
-            'updated_date': 'created_at',
-            'updated_at': 'created_at'
-          };
-          column = columnMap[column] || column;
-          
-          query = query.order(column, { ascending: !isDescending });
-        }
-        
-        const { data, error } = await query;
-        if (error) throw error;
-        return data || [];
-      } catch (error) {
-        console.error(`Supabase list failed for ${tableName}:`, error);
-        return [];
-      }
     }
   },
   filter: async (filters = {}, orderBy) => {
@@ -321,25 +340,21 @@ const createEntity = (tableName) => ({
   schema: () => schemas[tableName] || { properties: {} },
 
   delete: async (id) => {
-    if (isDevelopment) {
-      // Use localStorage for localhost development
+    // Try Supabase first (for CloudFront), fallback to localStorage (for localhost)
+    try {
+      const { error } = await supabase.from(tableName).delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.log(`Supabase failed for ${tableName}, using localStorage:`, error.message);
+      
+      // Fallback to localStorage
       const index = mockData[tableName]?.findIndex(item => item.id === id);
       if (index !== -1) {
         mockData[tableName].splice(index, 1);
         saveMockData(mockData);
-        console.log(`Deleted ${tableName} ${id} from localStorage`);
       }
       return true;
-    } else {
-      // Use Supabase for production
-      try {
-        const { error } = await supabase.from(tableName).delete().eq('id', id);
-        if (error) throw error;
-        return true;
-      } catch (error) {
-        console.error(`Supabase delete failed for ${tableName}:`, error);
-        throw error;
-      }
     }
   },
   get: async (id) => {
