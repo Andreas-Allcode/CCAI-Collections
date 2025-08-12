@@ -28,11 +28,12 @@ import {
   Link as LinkIcon,
   Copy,
   Loader2,
-  Briefcase
+  Briefcase,
+  Trash2,
+  X
 } from "lucide-react";
 import { format, isPast, differenceInDays } from "date-fns";
 import ChatHistoryModal from "./ChatHistoryModal";
-import OutboundMessagesModal from "./OutboundMessagesModal";
 import ActivityLogModal from "./ActivityLogModal";
 import usePermissions from '@/components/hooks/usePermissions';
 import { generateDocument } from '@/api/functions';
@@ -51,7 +52,6 @@ const caseStatuses = ["new", "in_collection", "payment_plan", "paid", "settled",
 
 export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms = [], getStatusColor, onStatusUpdate }) {
   const [showChatHistory, setShowChatHistory] = useState(false);
-  const [showOutboundMessages, setShowOutboundMessages] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [letterTemplates, setLetterTemplates] = useState([]);
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
@@ -168,6 +168,28 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
     navigator.clipboard.writeText(text);
     toast.info("Link copied to clipboard!");
   };
+  
+  const handleDeleteDebt = async () => {
+    if (!selectedCase) return;
+    
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete this debt case?\n\nDebtor: ${debtorName}\nAccount: ${selectedCase.account_number}\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    try {
+      await Case.delete(selectedCase.id);
+      toast.success("Debt case deleted successfully!");
+      // Trigger a refresh of the parent component
+      if (onStatusUpdate) {
+        onStatusUpdate(selectedCase.id, 'deleted');
+      }
+    } catch (error) {
+      console.error("Error deleting debt case:", error);
+      toast.error("Failed to delete debt case.");
+    }
+  };
 
   const debtorName = debtor?.name || selectedCase.debtor_name;
   const debtorEmail = debtor?.email || selectedCase.debtor_email;
@@ -220,9 +242,14 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
     <>
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <User className="w-5 h-5 text-blue-600" />
-            Debt Details
+          <CardTitle className="flex items-center justify-between text-lg">
+            <div className="flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-600" />
+              Debt Details
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => onStatusUpdate && onStatusUpdate(null, 'close')}>
+              ✕
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -594,10 +621,10 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
               <Button
                 variant="outline"
                 className="w-full hover:bg-green-50 hover:text-green-700 hover:border-green-200"
-                onClick={() => setShowOutboundMessages(true)}
+                onClick={() => window.location.href = createPageUrl(`Communications?caseId=${selectedCase.id}`)}
               >
                 <Send className="w-4 h-4 mr-2" />
-                Outbound Messages
+                View Messages
               </Button>
             </div>
 
@@ -646,6 +673,14 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                 <FileText className="w-4 h-4 mr-2" />
                 Add Note
               </Button>
+              <Button 
+                variant="outline" 
+                className="w-full hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-red-600 border-red-200"
+                onClick={handleDeleteDebt}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Debt Case
+              </Button>
             </div>
           )}
         </CardContent>
@@ -661,13 +696,6 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
       <ChatHistoryModal
         isOpen={showChatHistory}
         onClose={() => setShowChatHistory(false)}
-        caseId={selectedCase.id}
-        debtorName={debtorName}
-      />
-
-      <OutboundMessagesModal
-        isOpen={showOutboundMessages}
-        onClose={() => setShowOutboundMessages(false)}
         caseId={selectedCase.id}
         debtorName={debtorName}
       />

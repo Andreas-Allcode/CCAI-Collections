@@ -135,20 +135,29 @@ export default function ActivityLogModal({ isOpen, onClose, caseId, debtorName }
           icon: DollarSign,
           color: 'green'
         })),
-        ...activityLogs.map(log => ({
-          id: `activity_${log.id}`,
-          type: 'activity',
-          subType: log.activity_type,
-          timestamp: log.activity_date,
-          title: log.description,
-          description: log.metadata ? JSON.parse(log.metadata).event || '' : '',
-          details: {
-            performedBy: log.performed_by,
-            metadata: log.metadata
-          },
-          icon: log.activity_type === 'debt_validation_sent' ? Send : UserCheck,
-          color: 'orange'
-        }))
+        ...activityLogs.map(log => {
+          const metadata = log.metadata ? JSON.parse(log.metadata) : {};
+          const isDVNSent = metadata.event === 'dvn_sent';
+          const isAccountCreated = metadata.event === 'account_created';
+          
+          return {
+            id: `activity_${log.id}`,
+            type: 'activity',
+            subType: log.activity_type,
+            timestamp: log.activity_date,
+            title: log.description,
+            description: isDVNSent ? 'Debt Validation Notice sent automatically as required by law' : 
+                        isAccountCreated ? 'New debt account created in the system' : 
+                        metadata.event || '',
+            details: {
+              performedBy: log.performed_by,
+              metadata: log.metadata,
+              method: metadata.method
+            },
+            icon: isDVNSent ? Send : isAccountCreated ? UserCheck : FileText,
+            color: isDVNSent ? 'blue' : isAccountCreated ? 'green' : 'orange'
+          };
+        })
       ];
 
       console.log('All activities:', allActivities);

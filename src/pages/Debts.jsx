@@ -149,22 +149,44 @@ export default function Debts() {
       toast.error("You do not have permission to edit debts.");
       return;
     }
+    
     try {
-      await Case.update(caseId, { status: newStatus });
-
-      const updatedCases = await Case.list('-updated_date');
-      setCases(updatedCases || []);
-
-      if (selectedCase && selectedCase.id === caseId) {
-        const newlyUpdatedCase = (updatedCases || []).find(c => c.id === caseId);
-        if (newlyUpdatedCase) {
-          setSelectedCase(newlyUpdatedCase);
+      if (newStatus === 'deleted') {
+        // Handle deletion
+        await Case.delete(caseId);
+        
+        // Refresh the cases list
+        const updatedCases = await Case.list('-updated_date');
+        setCases(updatedCases || []);
+        
+        // Clear selected case if it was the deleted one
+        if (selectedCase && selectedCase.id === caseId) {
+          setSelectedCase(null);
         }
+        
+        toast.success("Debt case deleted successfully!");
+      } else if (newStatus === 'close') {
+        // Handle closing the debt details panel
+        setSelectedCase(null);
+        return;
+      } else {
+        // Handle status update
+        await Case.update(caseId, { status: newStatus });
+
+        const updatedCases = await Case.list('-updated_date');
+        setCases(updatedCases || []);
+
+        if (selectedCase && selectedCase.id === caseId) {
+          const newlyUpdatedCase = (updatedCases || []).find(c => c.id === caseId);
+          if (newlyUpdatedCase) {
+            setSelectedCase(newlyUpdatedCase);
+          }
+        }
+        toast.success("Debt status updated successfully!");
       }
-      toast.success("Debt status updated successfully!");
     } catch (error) {
-      console.error("Error updating debt status:", error);
-      toast.error("Failed to update debt status.");
+      console.error("Error updating debt:", error);
+      toast.error(newStatus === 'deleted' ? "Failed to delete debt case." : "Failed to update debt status.");
     }
   };
 

@@ -33,14 +33,15 @@ export default function DebtorForm({ debtor, onSuccess, onCancel }) {
 
         setIsSaving(true);
         try {
+            let savedDebtor;
             if (debtor?.id) {
-                await Debtor.update(debtor.id, formData);
+                savedDebtor = await Debtor.update(debtor.id, formData);
                 toast.success("Debtor updated successfully!");
             } else {
-                await Debtor.create(formData);
+                savedDebtor = await Debtor.create(formData);
                 toast.success("Debtor created successfully!");
             }
-            if(onSuccess) onSuccess();
+            if(onSuccess) onSuccess(savedDebtor);
         } catch (error) {
             console.error("Error saving debtor:", error);
             toast.error("Failed to save debtor.");

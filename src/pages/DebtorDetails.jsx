@@ -13,7 +13,12 @@ import { format, differenceInDays } from 'date-fns';
 import DebtorForm from '../components/debtors/DebtorForm';
 import DebtTable from '../components/debts/DebtTable';
 import ActivityLogModal from '../components/debts/ActivityLogModal';
+import ChatHistoryModal from '../components/debts/ChatHistoryModal';
 import CommunicationPanel from '../components/debts/CommunicationPanel';
+import { generateDocument } from '@/api/functions';
+import { Template } from '@/api/entities';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ChevronDown } from 'lucide-react';
 import { DebtorPortalSession } from '@/api/entities';
 import { createPageUrl } from '@/utils';
 import { Input } from '@/components/ui/input';
@@ -27,31 +32,14 @@ export default function DebtorDetails() {
     const [isEditing, setIsEditing] = useState(false);
     const [debtorId, setDebtorId] = useState(null);
     const [showActivityLog, setShowActivityLog] = useState(false);
+    const [showChatHistory, setShowChatHistory] = useState(false);
     const [showCommunications, setShowCommunications] = useState(false);
+    const [showGenerateDoc, setShowGenerateDoc] = useState(false);
     const [portalLink, setPortalLink] = useState(null);
+    const [letterTemplates, setLetterTemplates] = useState([]);
+    const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
 
-    const mockImportData = [
-        {
-            id: 'mock-debt-1',
-            account_number: 'ACC-2024-1001',
-            original_creditor: 'Chase Bank',
-            current_balance: 2500,
-            face_value: 100000,
-            status: 'in_collection',
-            last_contact_date: '2024-01-15',
-            notes: 'Contacted via phone, debtor agreed to payment plan'
-        },
-        {
-            id: 'mock-debt-2', 
-            account_number: 'ACC-2024-1002',
-            original_creditor: 'Capital One',
-            current_balance: 1800,
-            face_value: 100000,
-            status: 'new',
-            last_contact_date: null,
-            notes: 'Recently added to portfolio'
-        }
-    ];
+
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -63,6 +51,18 @@ export default function DebtorDetails() {
             setIsLoading(false);
         }
     }, [location.search]);
+    
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            try {
+                const allTemplates = await Template.list();
+                setLetterTemplates(allTemplates.filter(t => t.type === 'letter'));
+            } catch (error) {
+                console.error("Failed to fetch letter templates", error);
+            }
+        };
+        fetchTemplates();
+    }, []);
 
     const loadData = async (id) => {
         setIsLoading(true);
@@ -116,6 +116,39 @@ export default function DebtorDetails() {
         navigator.clipboard.writeText(text);
         toast.info("Link copied to clipboard!");
     };
+    
+    const handleGenerateDocument = async (templateId) => {
+        if (!primaryCase) return;
+        setIsGeneratingDoc(true);
+        try {
+            const { data, headers } = await generateDocument({ templateId: templateId, caseId: primaryCase.id });
+            const blob = new Blob([data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            const contentDisposition = headers['content-disposition'];
+            let filename = 'document.pdf';
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                if (filenameMatch.length > 1) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            toast.success("Document generated successfully!");
+        } catch (error) {
+            console.error("Error generating document:", error);
+            toast.error("Failed to generate document.");
+        } finally {
+            setIsGeneratingDoc(false);
+        }
+    };
 
     const getStatusColor = (status) => {
         const colors = {
@@ -164,6 +197,11 @@ export default function DebtorDetails() {
         if (days <= 120) return "bg-orange-100 text-orange-800";
         if (days <= 150) return "bg-red-100 text-red-800";
         return "bg-red-200 text-red-900";
+    };
+    
+    const getPortfolioName = (portfolioId) => {
+        const portfolio = portfolios.find(p => p.id === portfolioId);
+        return portfolio?.name || "Unknown Portfolio";
     };
     
     const caseAge = getCaseAge();
@@ -315,9 +353,9 @@ export default function DebtorDetails() {
                         <CardTitle>Portfolio</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <select className="w-full p-2 border rounded">
-                            <option>Quantum Financial ForwardFlow</option>
-                        </select>
+                        <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                            {primaryCase ? getPortfolioName(primaryCase.portfolio_id) : 'No portfolio assigned'}
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -394,26 +432,39 @@ export default function DebtorDetails() {
                     <div className="grid grid-cols-2 gap-3">
                         <Button
                             variant="outline"
+                            className="w-full hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
+                            onClick={() => setShowChatHistory(true)}
+                            disabled={!primaryCase}
+                        >
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Chat History
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="w-full hover:bg-green-50 hover:text-green-700 hover:border-green-200"
+                            onClick={() => window.location.href = createPageUrl(`Communications?caseId=${primaryCase?.id}`)}
+                            disabled={!primaryCase}
+                        >
+                            <Send className="w-4 h-4 mr-2" />
+                            View Messages
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="w-full hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200"
+                            onClick={() => setShowGenerateDoc(true)}
+                            disabled={!primaryCase}
+                        >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Generate Document
+                        </Button>
+                        <Button
+                            variant="outline"
                             className="w-full hover:bg-green-50 hover:text-green-700 hover:border-green-200"
                             onClick={() => setShowCommunications(true)}
                             disabled={!primaryCase}
                         >
                             <MessageSquare className="w-4 h-4 mr-2" />
                             Send Communication
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="w-full hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200"
-                            onClick={() => {
-                                const note = prompt('Enter a note for this debtor:');
-                                if (note) {
-                                    toast.success('Note added successfully!');
-                                    console.log('Note added:', note);
-                                }
-                            }}
-                        >
-                            <FileText className="w-4 h-4 mr-2" />
-                            Add Note
                         </Button>
                     </div>
                 </CardContent>
@@ -428,6 +479,15 @@ export default function DebtorDetails() {
                 />
             )}
             
+            {showChatHistory && primaryCase && (
+                <ChatHistoryModal
+                    isOpen={showChatHistory}
+                    onClose={() => setShowChatHistory(false)}
+                    caseId={primaryCase.id}
+                    debtorName={debtor.name}
+                />
+            )}
+            
             {showCommunications && primaryCase && (
                 <CommunicationPanel
                     caseData={primaryCase}
@@ -435,6 +495,53 @@ export default function DebtorDetails() {
                     onClose={() => setShowCommunications(false)}
                 />
             )}
+            
+            {showGenerateDoc && primaryCase && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                        <h3 className="text-lg font-semibold mb-4">Generate Document</h3>
+                        <div className="space-y-2">
+                            {letterTemplates.map(template => (
+                                <Button
+                                    key={template.id}
+                                    variant="outline"
+                                    className="w-full justify-start"
+                                    onClick={() => {
+                                        handleGenerateDocument(template.id);
+                                        setShowGenerateDoc(false);
+                                    }}
+                                    disabled={isGeneratingDoc}
+                                >
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    {template.name}
+                                </Button>
+                            ))}
+                        </div>
+                        <div className="flex justify-end mt-4">
+                            <Button variant="outline" onClick={() => setShowGenerateDoc(false)}>
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>Associated Debts ({cases.length})</CardTitle>
+                    <CardDescription>All debt cases linked to this debtor</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <DebtTable
+                        cases={cases}
+                        portfolios={portfolios}
+                        isLoading={false}
+                        onCaseSelect={() => {}}
+                        getStatusColor={getStatusColor}
+                        showDebtorName={false}
+                    />
+                </CardContent>
+            </Card>
         </div>
     );
 }

@@ -17,13 +17,15 @@ import {
   Send,
   Eye,
   Edit,
-  Filter
+  Filter,
+  ArrowLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 export default function Communications() {
+  const location = useLocation();
   const [communications, setCommunications] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [cases, setCases] = useState([]);
@@ -31,10 +33,22 @@ export default function Communications() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [selectedCase, setSelectedCase] = useState(null);
+  
+  // Get caseId from URL parameters
+  const urlParams = new URLSearchParams(location.search);
+  const caseIdFromUrl = urlParams.get('caseId');
 
   useEffect(() => {
     loadData();
   }, []);
+  
+  useEffect(() => {
+    if (caseIdFromUrl && cases.length > 0) {
+      const caseData = cases.find(c => c.id === caseIdFromUrl);
+      setSelectedCase(caseData);
+    }
+  }, [caseIdFromUrl, cases]);
 
   const loadData = async () => {
     try {
@@ -70,7 +84,8 @@ export default function Communications() {
                          comm.content?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          debtorName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'all' || comm.type === filterType;
-    return matchesSearch && matchesType;
+    const matchesCase = !caseIdFromUrl || comm.case_id === caseIdFromUrl;
+    return matchesSearch && matchesType && matchesCase;
   });
 
   const getTypeIcon = (type) => {
@@ -98,18 +113,38 @@ export default function Communications() {
   return (
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Communications</h1>
-          <p className="text-gray-600 mt-1">Manage templates and communication logs</p>
-        </div>
-        <Link to={createPageUrl("NewTemplate")}>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            New Template
+      {selectedCase ? (
+        <div className="space-y-4">
+          <Button variant="ghost" onClick={() => window.history.back()} className="pl-0">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Debt Details
           </Button>
-        </Link>
-      </div>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Communications for {getDebtorName(selectedCase.id)}</h1>
+              <p className="text-gray-600 mt-1">Account: {selectedCase.account_number} | Case ID: {selectedCase.id}</p>
+            </div>
+            <Link to={createPageUrl("NewTemplate")}>
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-4 h-4 mr-2" />
+                New Template
+              </Button>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Communications</h1>
+            <p className="text-gray-600 mt-1">Manage templates and communication logs</p>
+          </div>
+          <Link to={createPageUrl("NewTemplate")}>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              New Template
+            </Button>
+          </Link>
+        </div>
+      )}
 
       <Tabs defaultValue="logs" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">

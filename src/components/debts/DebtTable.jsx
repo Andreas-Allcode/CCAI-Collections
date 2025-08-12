@@ -107,8 +107,8 @@ export default function DebtTable({
                                 {showDebtorName && (
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
-                                            {debtor ? (
-                                                <Link to={createPageUrl(`DebtorDetails?id=${debtor.id}`)} onClick={e => e.stopPropagation()} className="hover:underline text-blue-600">
+                                            {(debtor || case_.debtor_id) ? (
+                                                <Link to={createPageUrl(`DebtorDetails?id=${debtor?.id || case_.debtor_id}`)} onClick={e => e.stopPropagation()} className="hover:underline text-blue-600">
                                                     <div className="flex items-center gap-1">
                                                         {debtorName || "Unnamed Debtor"} <LinkIcon className="w-3 h-3" />
                                                     </div>

@@ -31,8 +31,20 @@ const schemas = {
   }
 };
 
-// Mock data with relationships
-const mockData = {
+// Load mock data from localStorage or use defaults
+const loadMockData = () => {
+  const stored = localStorage.getItem('ccai_mock_data');
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  return getDefaultMockData();
+};
+
+const saveMockData = (data) => {
+  localStorage.setItem('ccai_mock_data', JSON.stringify(data));
+};
+
+const getDefaultMockData = () => ({
   vendors: [
     { id: '1', name: 'Smith & Associates Law Firm', type: 'law_firm', contact_person: 'John Smith', email: 'john@smithlaw.com', phone: '555-0101', status: 'active', created_at: '2024-01-15T10:00:00Z' },
     { id: '2', name: 'ABC Collection Agency', type: 'collection_agency', contact_person: 'Sarah Johnson', email: 'sarah@abccollect.com', phone: '555-0102', status: 'active', created_at: '2024-01-20T10:00:00Z' },
@@ -73,9 +85,30 @@ const mockData = {
     { id: '6', case_id: '5', type: 'letter', direction: 'outbound', content: 'Final notice before legal action', sent_date: '2024-03-18T08:00:00Z', delivery_status: 'delivered', created_at: '2024-03-18T08:00:00Z' }
   ],
   templates: [
-    { id: '1', name: 'Payment Reminder Email', type: 'email', subject: 'Payment Reminder', body: 'Dear {{debtor_name}}, this is a reminder about your outstanding balance of ${{balance}}.', status: 'active', created_at: '2024-01-01T10:00:00Z' },
-    { id: '2', name: 'Payment Confirmation SMS', type: 'sms', body: 'Thank you for your payment of ${{amount}}. Your new balance is ${{balance}}.', status: 'active', created_at: '2024-01-01T10:00:00Z' },
-    { id: '3', name: 'Settlement Offer Letter', type: 'letter', body: 'We are pleased to offer you a settlement of {{settlement_amount}} for your account.', status: 'active', created_at: '2024-01-01T10:00:00Z' }
+    { id: '1', name: 'Settlement Offer', type: 'letter', body: 'AllCode\n101 Montgomery Street\n(415) 890-6431\n\nSettlement Offer - Account {{account_number}}\n\nDear {{debtor_name}},\n\nWe are pleased to offer you a settlement opportunity for your account {{account_number}}.\n\nOriginal Balance: ${{original_balance}}\nSettlement Offer: ${{settlement_offer}}\n\nThis offer is valid for 30 days from the date of this letter. To accept this settlement, please contact us immediately.\n\nSincerely,\nDebtFlow Legal Department', status: 'active', created_at: '2024-01-01T10:00:00Z' },
+    { id: '2', name: 'Debt Validation Notice (DVN)', type: 'letter', body: 'AllCode\n101 Montgomery Street\n(415) 890-6431\n\nAccount Information and Validation Notice\n\nDate: {{current_date}}\n\nTo: {{debtor_name}}\n{{debtor_address}}\n\nFrom:\nAllCode\n101 Montgomery Street\n\nRE: Account Number {{account_number}}\nOriginal Creditor: {{original_creditor}}\nOriginal Balance: ${{original_balance}}\nCurrent Balance: ${{current_balance}}\n\nDear {{debtor_name}},\n\nThis letter is to inform you that our agency is now managing the above-referenced account.\n\nUnless you notify this office within 30 days after receiving this notice that you dispute the validity of this debt or any portion thereof, this debt will be assumed to be valid. If you notify this office in writing within 30 days from receiving this notice that you dispute the validity of this debt or any portion thereof, this office will obtain verification of the debt or obtain a copy of a judgment and mail you a copy of such judgment or verification. If you request of this office in writing within 30 days after receiving this notice, this office will provide you with the name and address of the original creditor, if different from the current creditor.\n\nThis is a communication from a debt collector. This is an attempt to collect a debt and any information obtained will be used for that purpose.\n\nSincerely,\nAllCode', status: 'active', created_at: '2024-01-01T10:00:00Z' },
+    { id: '3', name: 'Notice of Legal Representation', type: 'letter', body: 'AllCode\n101 Montgomery Street\n(415) 890-6431\n\nNotice of Legal Representation\n\nDate: {{current_date}}\n\nTo: {{debtor_name}}\n{{debtor_address}}\n\nFrom:\nAllCode\n101 Montgomery Street\n\nRE: Account Number {{account_number}}\n\nDear {{debtor_name}},\n\nPlease be advised that our firm, AllCode, has been retained to represent the current creditor regarding the above-referenced account. All future communications regarding this matter should be directed to our office.\n\nYou have certain rights under federal and state law. We are required to inform you that this communication is from a debt collector and is an attempt to collect a debt. Any information obtained will be used for that purpose.\n\nPlease contact our office to discuss this matter further.\n\nSincerely,\nLegal Department\nAllCode', status: 'active', created_at: '2024-01-01T10:00:00Z' }
+  ],
+  campaigns: [
+    { id: '1', name: 'Q1 2024 Payment Reminder Campaign', status: 'active', created_at: '2024-01-15T10:00:00Z', description: 'Automated payment reminder campaign for overdue accounts', target_count: 150, sent_count: 142, opened_count: 89, clicked_count: 23 }
+  ],
+  activity_logs: [
+    { id: '1', case_id: '4', amount: 750, payment_method: 'credit_card', payment_date: '2024-03-15', status: 'completed', created_at: '2024-03-15T14:30:00Z' },
+    { id: '2', case_id: '3', amount: 200, payment_method: 'ach', payment_date: '2024-03-20', status: 'completed', created_at: '2024-03-20T09:15:00Z' },
+    { id: '3', case_id: '5', amount: 3000, payment_method: 'check', payment_date: '2024-03-25', status: 'completed', created_at: '2024-03-25T11:45:00Z' }
+  ],
+  communications: [
+    { id: '1', case_id: '1', type: 'email', direction: 'outbound', subject: 'Payment Reminder', content: 'This is a reminder about your outstanding balance.', sent_date: '2024-03-10T10:00:00Z', delivery_status: 'delivered', created_at: '2024-03-10T10:00:00Z' },
+    { id: '2', case_id: '2', type: 'sms', direction: 'outbound', content: 'Please call us to discuss your account.', sent_date: '2024-03-12T14:30:00Z', delivery_status: 'delivered', created_at: '2024-03-12T14:30:00Z' },
+    { id: '3', case_id: '3', type: 'email', direction: 'inbound', subject: 'Payment Plan Request', content: 'I would like to set up a payment plan.', sent_date: '2024-03-14T16:20:00Z', delivery_status: 'delivered', created_at: '2024-03-14T16:20:00Z' },
+    { id: '4', case_id: '1', type: 'call', direction: 'outbound', content: 'Called debtor to discuss payment options', sent_date: '2024-03-15T09:00:00Z', delivery_status: 'delivered', created_at: '2024-03-15T09:00:00Z' },
+    { id: '5', case_id: '4', type: 'email', direction: 'outbound', subject: 'Settlement Offer', content: 'We are offering a settlement of 60% of your balance.', sent_date: '2024-03-16T11:30:00Z', delivery_status: 'opened', created_at: '2024-03-16T11:30:00Z' },
+    { id: '6', case_id: '5', type: 'letter', direction: 'outbound', content: 'Final notice before legal action', sent_date: '2024-03-18T08:00:00Z', delivery_status: 'delivered', created_at: '2024-03-18T08:00:00Z' }
+  ],
+  templates: [
+    { id: '1', name: 'Settlement Offer', type: 'letter', body: 'AllCode\n101 Montgomery Street\n(415) 890-6431\n\nSettlement Offer - Account {{account_number}}\n\nDear {{debtor_name}},\n\nWe are pleased to offer you a settlement opportunity for your account {{account_number}}.\n\nOriginal Balance: ${{original_balance}}\nSettlement Offer: ${{settlement_offer}}\n\nThis offer is valid for 30 days from the date of this letter. To accept this settlement, please contact us immediately.\n\nSincerely,\nDebtFlow Legal Department', status: 'active', created_at: '2024-01-01T10:00:00Z' },
+    { id: '2', name: 'Debt Validation Notice (DVN)', type: 'letter', body: 'AllCode\n101 Montgomery Street\n(415) 890-6431\n\nAccount Information and Validation Notice\n\nDate: {{current_date}}\n\nTo: {{debtor_name}}\n{{debtor_address}}\n\nFrom:\nAllCode\n101 Montgomery Street\n\nRE: Account Number {{account_number}}\nOriginal Creditor: {{original_creditor}}\nOriginal Balance: ${{original_balance}}\nCurrent Balance: ${{current_balance}}\n\nDear {{debtor_name}},\n\nThis letter is to inform you that our agency is now managing the above-referenced account.\n\nUnless you notify this office within 30 days after receiving this notice that you dispute the validity of this debt or any portion thereof, this debt will be assumed to be valid. If you notify this office in writing within 30 days from receiving this notice that you dispute the validity of this debt or any portion thereof, this office will obtain verification of the debt or obtain a copy of a judgment and mail you a copy of such judgment or verification. If you request of this office in writing within 30 days after receiving this notice, this office will provide you with the name and address of the original creditor, if different from the current creditor.\n\nThis is a communication from a debt collector. This is an attempt to collect a debt and any information obtained will be used for that purpose.\n\nSincerely,\nAllCode', status: 'active', created_at: '2024-01-01T10:00:00Z' },
+    { id: '3', name: 'Notice of Legal Representation', type: 'letter', body: 'AllCode\n101 Montgomery Street\n(415) 890-6431\n\nNotice of Legal Representation\n\nDate: {{current_date}}\n\nTo: {{debtor_name}}\n{{debtor_address}}\n\nFrom:\nAllCode\n101 Montgomery Street\n\nRE: Account Number {{account_number}}\n\nDear {{debtor_name}},\n\nPlease be advised that our firm, AllCode, has been retained to represent the current creditor regarding the above-referenced account. All future communications regarding this matter should be directed to our office.\n\nYou have certain rights under federal and state law. We are required to inform you that this communication is from a debt collector and is an attempt to collect a debt. Any information obtained will be used for that purpose.\n\nPlease contact our office to discuss this matter further.\n\nSincerely,\nLegal Department\nAllCode', status: 'active', created_at: '2024-01-01T10:00:00Z' }
   ],
   campaigns: [
     { id: '1', name: 'Q1 2024 Payment Reminder Campaign', status: 'active', created_at: '2024-01-15T10:00:00Z', description: 'Automated payment reminder campaign for overdue accounts', target_count: 150, sent_count: 142, opened_count: 89, clicked_count: 23 }
@@ -100,7 +133,15 @@ const mockData = {
     { id: 'log_6_1', case_id: '6', activity_type: 'debt_validation_sent', description: 'Account Created', performed_by: 'system', activity_date: '2024-01-10T10:00:00Z', metadata: JSON.stringify({ event: 'account_created' }), created_at: '2024-01-10T10:00:00Z' },
     { id: 'log_6_2', case_id: '6', activity_type: 'debt_validation_sent', description: 'DVN was sent', performed_by: 'system', activity_date: '2024-01-10T10:01:00Z', metadata: JSON.stringify({ event: 'dvn_sent', method: 'automated' }), created_at: '2024-01-10T10:01:00Z' }
   ]
-};
+});
+
+// Initialize mock data from localStorage
+let mockData = loadMockData();
+
+// Save initial data to localStorage if not exists
+if (!localStorage.getItem('ccai_mock_data')) {
+  saveMockData(mockData);
+}
 
 // Entity helpers using Supabase
 const createEntity = (tableName) => ({
@@ -143,6 +184,9 @@ const createEntity = (tableName) => ({
       // Add to mock data
       mockData.cases.push(newRecord);
       
+      // Save to localStorage for persistence
+      saveMockData(mockData);
+      
       // Create activity log entries
       const now = new Date().toISOString();
       
@@ -172,6 +216,9 @@ const createEntity = (tableName) => ({
       
       mockData.activity_logs.push(accountCreatedLog, dvnSentLog);
       
+      // Save to localStorage
+      saveMockData(mockData);
+      
       return newRecord;
     }
     
@@ -189,6 +236,7 @@ const createEntity = (tableName) => ({
       };
       
       mockData.campaigns.push(newRecord);
+      saveMockData(mockData);
       return newRecord;
     }
     
@@ -206,6 +254,7 @@ const createEntity = (tableName) => ({
       };
       mockData[tableName] = mockData[tableName] || [];
       mockData[tableName].push(newRecord);
+      saveMockData(mockData);
       return newRecord;
     }
   },
@@ -316,8 +365,28 @@ const createEntity = (tableName) => ({
   schema: () => schemas[tableName] || { properties: {} },
 
   delete: async (id) => {
-    console.log(`Mock delete for ${tableName}:`, id);
-    return true;
+    if (tableName === 'cases') {
+      // Remove from mock data
+      const index = mockData.cases.findIndex(item => item.id === id);
+      if (index !== -1) {
+        mockData.cases.splice(index, 1);
+        saveMockData(mockData);
+        console.log(`Deleted case ${id} from mock data`);
+      } else {
+        console.log(`Case ${id} not found in mock data, but treating as successful delete`);
+      }
+      return true;
+    }
+    
+    // For other entities, try Supabase first
+    try {
+      const { error } = await supabase.from(tableName).delete().eq('id', id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.log(`Mock delete for ${tableName}:`, id);
+      return true;
+    }
   },
   get: async (id) => {
     let data = mockData[tableName] || [];
@@ -330,6 +399,17 @@ const createEntity = (tableName) => ({
     
     const record = data.find(item => item.id === id);
     if (!record) {
+      if (tableName === 'debtors') {
+        // Return a placeholder debtor for missing records
+        return {
+          id: id,
+          name: 'Unknown Debtor',
+          email: '',
+          phone: '',
+          address: '',
+          created_at: new Date().toISOString()
+        };
+      }
       throw new Error(`${tableName} with id ${id} not found`);
     }
     return record;
