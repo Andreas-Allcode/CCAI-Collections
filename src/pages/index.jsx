@@ -44,6 +44,20 @@ import NewTemplate from "./NewTemplate";
 
 import DebtImport from "./DebtImport";
 
+import VendorDetails from "./VendorDetails";
+
+import ReportBuilder from "./ReportBuilder";
+
+import AdminDashboard from "./AdminDashboard";
+
+import TemplateManager from "./TemplateManager";
+
+import DebtorActivityReport from "./DebtorActivityReport";
+
+import DebtBuyerPortal from "./DebtBuyerPortal";
+
+import LeadershipDashboard from "./LeadershipDashboard";
+
 import TestActivityLog from "./TestActivityLog";
 
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
@@ -93,6 +107,20 @@ const PAGES = {
     NewTemplate: NewTemplate,
     
     DebtImport: DebtImport,
+    
+    VendorDetails: VendorDetails,
+    
+    ReportBuilder: ReportBuilder,
+    
+    AdminDashboard: AdminDashboard,
+    
+    TemplateManager: TemplateManager,
+    
+    DebtorActivityReport: DebtorActivityReport,
+    
+    DebtBuyerPortal: DebtBuyerPortal,
+    
+    LeadershipDashboard: LeadershipDashboard,
     
     TestActivityLog: TestActivityLog,
     
@@ -166,6 +194,20 @@ function PagesContent() {
                 <Route path="/NewTemplate" element={<NewTemplate />} />
                 
                 <Route path="/DebtImport" element={<DebtImport />} />
+                
+                <Route path="/VendorDetails" element={<VendorDetails />} />
+                
+                <Route path="/ReportBuilder" element={<ReportBuilder />} />
+                
+                <Route path="/AdminDashboard" element={<AdminDashboard />} />
+                
+                <Route path="/TemplateManager" element={<TemplateManager />} />
+                
+                <Route path="/DebtorActivityReport" element={<DebtorActivityReport />} />
+                
+                <Route path="/DebtBuyerPortal" element={<DebtBuyerPortal />} />
+                
+                <Route path="/LeadershipDashboard" element={<LeadershipDashboard />} />
                 
                 <Route path="/TestActivityLog" element={<TestActivityLog />} />
                 

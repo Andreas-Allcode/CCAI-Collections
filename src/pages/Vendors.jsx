@@ -281,7 +281,12 @@ export default function Vendors() {
                   <TableRow key={vendor.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium text-gray-900">{vendor.name}</p>
+                        <Link 
+                          to={createPageUrl(`VendorDetails?id=${vendor.id}`)}
+                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {vendor.name}
+                        </Link>
                         {vendor.contact_person && (
                           <p className="text-sm text-gray-500">{vendor.contact_person}</p>
                         )}

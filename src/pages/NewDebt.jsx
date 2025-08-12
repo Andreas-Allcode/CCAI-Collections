@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'; // Added import for Label
 import { Case } from '@/api/entities';
 import { Portfolio } from '@/api/entities';
 import { Debtor } from '@/api/entities';
+import { Vendor } from '@/api/entities';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ import { initiateScrubProcess } from "@/api/functions";
 export default function NewDebt() {
     const [portfolios, setPortfolios] = useState([]);
     const [debtors, setDebtors] = useState([]);
+    const [vendors, setVendors] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDebtor, setSelectedDebtor] = useState(null);
     const [showNewDebtorForm, setShowNewDebtorForm] = useState(false);
@@ -30,6 +32,8 @@ export default function NewDebt() {
     const [caseData, setCaseData] = useState({
         portfolio_id: '',
         debtor_id: '',
+        vendor_id: '',
+        scrub_method: '',
         account_number: '',
         original_creditor: '',
         original_creditor_address: '',
@@ -55,9 +59,10 @@ export default function NewDebt() {
     const fetchDataWithRetry = async () => {
         setIsLoading(true);
         try {
-            // Fetch portfolios first
-            const [portfolioList] = await Promise.all([
-                Portfolio.list()
+            // Fetch portfolios and vendors first
+            const [portfolioList, vendorList] = await Promise.all([
+                Portfolio.list(),
+                Vendor.list()
             ]);
 
             // Add delay between requests to avoid rate limiting
@@ -67,6 +72,7 @@ export default function NewDebt() {
             const debtorList = await Debtor.list();
 
             setPortfolios(portfolioList || []);
+            setVendors(vendorList || []);
             setDebtors(debtorList || []);
             setRetryCount(0); // Reset retry count on success
         } catch (error) {
@@ -314,6 +320,26 @@ export default function NewDebt() {
                                         <SelectTrigger><SelectValue placeholder="Select a portfolio" /></SelectTrigger>
                                         <SelectContent>
                                             {portfolios.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="vendor_id">Vendor</Label>
+                                    <Select onValueChange={(value) => handleSelectChange('vendor_id', value)} value={caseData.vendor_id}>
+                                        <SelectTrigger><SelectValue placeholder="Select a vendor" /></SelectTrigger>
+                                        <SelectContent>
+                                            {vendors.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="scrub_method">Scrub Method</Label>
+                                    <Select onValueChange={(value) => handleSelectChange('scrub_method', value)} value={caseData.scrub_method}>
+                                        <SelectTrigger><SelectValue placeholder="Select scrub method" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="experian">Experian</SelectItem>
+                                            <SelectItem value="rnn">RNN</SelectItem>
+                                            <SelectItem value="tlo">TLO</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

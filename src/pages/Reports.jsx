@@ -34,13 +34,17 @@ import {
   Percent,
   AlertTriangle,
   UserX,
-  Scale
+  Scale,
+  Plus
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'];
 
 export default function Reports() {
+  const navigate = useNavigate();
   const [portfolios, setPortfolios] = useState([]);
   const [cases, setCases] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -219,6 +223,10 @@ export default function Reports() {
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Export Report
+          </Button>
+          <Button onClick={() => navigate(createPageUrl('ReportBuilder'))} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Custom Report
           </Button>
         </div>
       </div>

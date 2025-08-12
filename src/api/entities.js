@@ -51,17 +51,19 @@ const getDefaultMockData = () => ({
     { id: '3', name: 'TechServ Solutions', type: 'technology', contact_person: 'Mike Davis', email: 'mike@techserv.com', phone: '555-0103', status: 'inactive', created_at: '2024-02-01T10:00:00Z' }
   ],
   portfolios: [
-    { id: '1', name: 'Q1 2024 Medical Debt', client: 'MedCorp LLC', portfolio_type: 'committed', status: 'active', created_at: '2024-01-10T10:00:00Z' },
-    { id: '2', name: 'Credit Card Portfolio A', client: 'FinanceFirst LLC', portfolio_type: 'spec', status: 'active', created_at: '2024-02-15T10:00:00Z' },
-    { id: '3', name: 'Auto Loan Defaults', client: 'AutoCredit LLC', portfolio_type: 'committed', status: 'completed', created_at: '2024-03-01T10:00:00Z' }
+    { id: '1', name: 'Q1 2024 Medical Debt', client: 'MedCorp LLC', portfolio_type: 'committed', portfolio_category: 'purchased', total_face_value: 125000, purchase_price: 15000, account_count: 150, status: 'active', created_at: '2024-01-10T10:00:00Z' },
+    { id: '2', name: 'Credit Card Portfolio A', client: 'FinanceFirst LLC', portfolio_type: 'spec', portfolio_category: 'purchased', total_face_value: 250000, purchase_price: 37500, account_count: 320, status: 'active', created_at: '2024-02-15T10:00:00Z' },
+    { id: '3', name: 'Auto Loan Defaults', client: 'AutoCredit LLC', portfolio_type: 'committed', portfolio_category: 'purchased', total_face_value: 180000, purchase_price: 27000, account_count: 85, status: 'completed', created_at: '2024-03-01T10:00:00Z' },
+    { id: '4', name: 'High-Value Credit Cards', client: 'CAUSA Internal', portfolio_type: 'spec', portfolio_category: 'for_sale', total_face_value: 450000, asking_price: 90000, account_count: 275, status: 'for_sale', created_at: '2024-04-01T10:00:00Z' },
+    { id: '5', name: 'Medical Collection Bundle', client: 'CAUSA Internal', portfolio_type: 'committed', portfolio_category: 'for_sale', total_face_value: 320000, asking_price: 64000, account_count: 420, status: 'for_sale', created_at: '2024-04-15T10:00:00Z' }
   ],
   cases: [
-    { id: '1', portfolio_id: '1', debtor_id: '1', debtor_name: 'John Doe', account_number: 'MED001', original_balance: 2500, current_balance: 2500, original_creditor: 'City Hospital', charge_off_date: '2024-01-01', status: 'new', priority: 'medium', created_at: '2024-01-10T10:00:00Z' },
-    { id: '2', portfolio_id: '1', debtor_id: '2', debtor_name: 'Jane Smith', account_number: 'MED002', original_balance: 1800, current_balance: 1800, original_creditor: 'City Hospital', charge_off_date: '2023-12-15', status: 'in_collection', priority: 'high', created_at: '2024-01-10T10:00:00Z' },
-    { id: '3', portfolio_id: '2', debtor_id: '3', debtor_name: 'Bob Johnson', account_number: 'CC001', original_balance: 3200, current_balance: 3200, original_creditor: 'National Bank', charge_off_date: '2023-11-01', status: 'payment_plan', priority: 'medium', created_at: '2024-02-15T10:00:00Z' },
-    { id: '4', portfolio_id: '2', debtor_id: '4', debtor_name: 'Alice Brown', account_number: 'CC002', original_balance: 1500, current_balance: 750, original_creditor: 'National Bank', charge_off_date: '2023-10-15', status: 'paid', priority: 'low', created_at: '2024-02-15T10:00:00Z' },
-    { id: '5', portfolio_id: '3', debtor_id: '5', debtor_name: 'Charlie Wilson', account_number: 'AUTO001', original_balance: 15000, current_balance: 12000, original_creditor: 'Car Finance Co', charge_off_date: '2023-08-01', status: 'settled', priority: 'high', created_at: '2024-03-01T10:00:00Z' },
-    { id: '6', portfolio_id: '1', debtor_id: '6', debtor_name: 'Sarah Chen', account_number: 'ACC-20241201-5678', original_balance: 12000, current_balance: 13500, original_creditor: 'Wells Fargo', charge_off_date: '2023-09-21', status: 'legal_action', priority: 'high', created_at: '2024-01-10T10:00:00Z' }
+    { id: '1', portfolio_id: '1', debtor_id: '1', debtor_name: 'John Doe', account_number: 'MED001', original_balance: 2500, current_balance: 2500, original_creditor: 'City Hospital', charge_off_date: '2024-01-01', status: 'new', priority: 'medium', vendor_id: '1', scrub_method: 'experian', created_at: '2024-01-10T10:00:00Z' },
+    { id: '2', portfolio_id: '1', debtor_id: '2', debtor_name: 'Jane Smith', account_number: 'MED002', original_balance: 1800, current_balance: 1800, original_creditor: 'City Hospital', charge_off_date: '2023-12-15', status: 'in_collection', priority: 'high', vendor_id: '2', scrub_method: 'rnn', created_at: '2024-01-10T10:00:00Z' },
+    { id: '3', portfolio_id: '2', debtor_id: '3', debtor_name: 'Bob Johnson', account_number: 'CC001', original_balance: 3200, current_balance: 3200, original_creditor: 'National Bank', charge_off_date: '2023-11-01', status: 'payment_plan', priority: 'medium', vendor_id: '2', scrub_method: 'tlo', created_at: '2024-02-15T10:00:00Z' },
+    { id: '4', portfolio_id: '2', debtor_id: '4', debtor_name: 'Alice Brown', account_number: 'CC002', original_balance: 1500, current_balance: 750, original_creditor: 'National Bank', charge_off_date: '2023-10-15', status: 'paid', priority: 'low', vendor_id: '2', scrub_method: 'experian', created_at: '2024-02-15T10:00:00Z' },
+    { id: '5', portfolio_id: '3', debtor_id: '5', debtor_name: 'Charlie Wilson', account_number: 'AUTO001', original_balance: 15000, current_balance: 12000, original_creditor: 'Car Finance Co', charge_off_date: '2023-08-01', status: 'settled', priority: 'high', vendor_id: '1', scrub_method: 'rnn', created_at: '2024-03-01T10:00:00Z' },
+    { id: '6', portfolio_id: '1', debtor_id: '6', debtor_name: 'Sarah Chen', account_number: 'ACC-20241201-5678', original_balance: 12000, current_balance: 13500, original_creditor: 'Wells Fargo', charge_off_date: '2023-09-21', status: 'legal_action', priority: 'high', vendor_id: '1', scrub_method: 'tlo', created_at: '2024-01-10T10:00:00Z' }
   ],
   debtors: [
     { id: '1', name: 'John Doe', email: 'john.doe@email.com', phone: '555-1001', created_at: '2024-01-05T10:00:00Z' },
@@ -166,10 +168,10 @@ const populateSupabaseIfEmpty = async (tableName) => {
 // Initialize mock data from localStorage
 let mockData = loadMockData();
 
-// Save initial data to localStorage if not exists
-if (!localStorage.getItem('ccai_mock_data')) {
-  saveMockData(mockData);
-}
+// Force update localStorage with vendor_id fields
+console.log('Force updating localStorage with vendor assignments...');
+localStorage.removeItem('ccai_mock_data');
+saveMockData(mockData);
 
 // Entity helpers using Supabase
 const createEntity = (tableName) => ({
@@ -198,6 +200,56 @@ const createEntity = (tableName) => ({
     // Always add to mock data (for both localStorage and as default data)
     mockData[tableName] = mockData[tableName] || [];
     mockData[tableName].push(newRecord);
+    
+    // For cases (debts), add activity log entries
+    if (tableName === 'cases') {
+      const now = new Date().toISOString();
+      const baseId = Date.now();
+      
+      // Account Created entry
+      const accountCreatedLog = {
+        id: `log_${baseId}_1`,
+        case_id: newRecord.id,
+        activity_type: 'account_created',
+        description: 'Account Created',
+        performed_by: 'system',
+        activity_date: now,
+        metadata: JSON.stringify({ event: 'account_created' }),
+        created_at: now
+      };
+      
+      // DVN Sent entry
+      const dvnSentLog = {
+        id: `log_${baseId}_2`,
+        case_id: newRecord.id,
+        activity_type: 'dvn_sent',
+        description: 'DVN was sent',
+        performed_by: 'system',
+        activity_date: new Date(Date.now() + 1000).toISOString(),
+        metadata: JSON.stringify({ event: 'dvn_sent', method: 'automated' }),
+        created_at: new Date(Date.now() + 1000).toISOString()
+      };
+      
+      // Scrub Process Started entry
+      const scrubStartedLog = {
+        id: `log_${baseId}_3`,
+        case_id: newRecord.id,
+        activity_type: 'scrub_started',
+        description: `Scrub process started (${data.scrub_method || 'Unknown'})`,
+        performed_by: 'system',
+        activity_date: new Date(Date.now() + 2000).toISOString(),
+        metadata: JSON.stringify({ 
+          event: 'scrub_started', 
+          scrub_method: data.scrub_method || 'unknown',
+          vendor_id: data.vendor_id 
+        }),
+        created_at: new Date(Date.now() + 2000).toISOString()
+      };
+      
+      mockData.activity_logs = mockData.activity_logs || [];
+      mockData.activity_logs.push(accountCreatedLog, dvnSentLog, scrubStartedLog);
+    }
+    
     saveMockData(mockData);
     
     // Also try to add to Supabase (for CloudFront persistence)
