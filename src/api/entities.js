@@ -190,12 +190,14 @@ const createEntity = (tableName) => ({
     return data;
   },
   create: async (data) => {
-    // Create new record
+    // Create new record with proper UUID
     const newRecord = {
-      id: Date.now().toString(),
+      id: self.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       ...data,
       created_at: new Date().toISOString()
     };
+    
+    console.log(`Creating ${tableName} with data:`, newRecord);
     
     // Always add to mock data (for both localStorage and as default data)
     mockData[tableName] = mockData[tableName] || [];
@@ -204,7 +206,7 @@ const createEntity = (tableName) => ({
     // For cases (debts), add activity log entries
     if (tableName === 'cases') {
       const now = new Date().toISOString();
-      const baseId = Date.now();
+      const baseId = self.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
       // Account Created entry
       const accountCreatedLog = {
@@ -251,6 +253,7 @@ const createEntity = (tableName) => ({
     }
     
     saveMockData(mockData);
+    console.log(`Saved ${tableName} to localStorage, total records:`, mockData[tableName].length);
     
     // Also try to add to Supabase (for CloudFront persistence)
     try {

@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link as LinkIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, differenceInDays, parseISO, isValid } from 'date-fns';
 import { Checkbox } from "@/components/ui/checkbox";
 
 export default function DebtTable({
@@ -107,8 +107,8 @@ export default function DebtTable({
                                 {showDebtorName && (
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
-                                            {(debtor || case_.debtor_id) ? (
-                                                <Link to={createPageUrl(`DebtorDetails?id=${debtor?.id || case_.debtor_id}`)} onClick={e => e.stopPropagation()} className="hover:underline text-blue-600">
+                                            {case_.debtor_id ? (
+                                                <Link to={createPageUrl(`DebtorDetails?id=${case_.debtor_id}`)} onClick={e => e.stopPropagation()} className="hover:underline text-blue-600">
                                                     <div className="flex items-center gap-1">
                                                         {debtorName || "Unnamed Debtor"} <LinkIcon className="w-3 h-3" />
                                                     </div>
@@ -123,7 +123,17 @@ export default function DebtTable({
                                 )}
                                 <TableCell>{case_.account_number}</TableCell>
                                 <TableCell>{getPortfolioName(case_.portfolio_id)}</TableCell>
-                                <TableCell>${case_.current_balance?.toLocaleString() || 0}</TableCell>
+                                <TableCell>
+                                    ${(() => {
+                                        const balance = case_.current_balance;
+                                        if (balance === null || balance === undefined || isNaN(balance)) {
+                                            return '0';
+                                        }
+                                        // If balance is negative, it might be a parsing error, try to get absolute value
+                                        const displayBalance = balance < 0 ? Math.abs(balance) : balance;
+                                        return displayBalance.toLocaleString();
+                                    })()}
+                                </TableCell>
                                 <TableCell className="text-green-600 font-medium">
                                     ${(casePaymentsMap[case_.id] || 0).toLocaleString()}
                                 </TableCell>
@@ -133,9 +143,33 @@ export default function DebtTable({
                                     </Badge>
                                 </TableCell>
                                 <TableCell>
-                                    {case_.updated_date ? 
-                                        formatDistanceToNow(new Date(case_.updated_date), { addSuffix: true }) : 
-                                        'No update'
+                                    {(() => {
+                                        // Calculate days since charge off if available
+                                        if (case_.charge_off_date) {
+                                            try {
+                                                const chargeOffDate = typeof case_.charge_off_date === 'string' ? parseISO(case_.charge_off_date) : new Date(case_.charge_off_date);
+                                                if (isValid(chargeOffDate)) {
+                                                    const days = differenceInDays(new Date(), chargeOffDate);
+                                                    return `${days} days ago`;
+                                                }
+                                            } catch (e) {
+                                                console.error('Error parsing charge off date:', e);
+                                            }
+                                        }
+                                        
+                                        // Fallback to updated/created date
+                                        const dateToUse = case_.updated_date || case_.created_at;
+                                        if (dateToUse) {
+                                            try {
+                                                const date = typeof dateToUse === 'string' ? parseISO(dateToUse) : new Date(dateToUse);
+                                                return isValid(date) ? formatDistanceToNow(date, { addSuffix: true }) : 'No update';
+                                            } catch (e) {
+                                                return 'No update';
+                                            }
+                                        }
+                                        
+                                        return 'No update';
+                                    })()
                                     }
                                 </TableCell>
                             </TableRow>

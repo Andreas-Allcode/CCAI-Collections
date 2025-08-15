@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Portfolio, Vendor, Case } from '@/api/entities';
+import { Portfolio, Vendor, Case, Debtor } from '@/api/entities';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -55,20 +55,17 @@ export default function DebtImport() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target.result;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim());
+      // Use Papa Parse for better CSV parsing
+      const parsed = Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (header) => header.trim()
+      });
       
-      const data = lines.slice(1)
-        .filter(line => line.trim())
-        .map((line, index) => {
-          const values = line.split(',').map(v => v.trim());
-          const row = {};
-          headers.forEach((header, i) => {
-            row[header] = values[i] || '';
-          });
-          row._rowIndex = index + 2; // +2 because we start from line 2
-          return row;
-        });
+      const data = parsed.data.map((row, index) => ({
+        ...row,
+        _rowIndex: index + 2
+      }));
       
       setPreviewData(data.slice(0, 10)); // Show first 10 rows for preview
     };
@@ -125,7 +122,7 @@ export default function DebtImport() {
   };
 
   const handleImport = async () => {
-    if (!file || !selectedPortfolio || !selectedVendor || !scrubMethod) {
+    if (!file || !selectedPortfolio || !scrubMethod) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -137,53 +134,111 @@ export default function DebtImport() {
       const reader = new FileReader();
       reader.onload = async (e) => {
         const text = e.target.result;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
+        // Use Papa Parse for better CSV parsing
+        const parsed = Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (header) => header.trim()
+        });
         
-        const data = lines.slice(1)
-          .filter(line => line.trim())
-          .map(line => {
-            const values = line.split(',').map(v => v.trim());
-            const row = {};
-            headers.forEach((header, i) => {
-              row[header] = values[i] || '';
-            });
-            return row;
-          });
+        const data = parsed.data;
+
+        // Define helper functions first
+        const parseBalance = (value) => {
+          if (!value || value === '') return 0;
+          const cleanValue = String(value).replace(/[$,\s]/g, '').trim();
+          const parsed = parseFloat(cleanValue);
+          return isNaN(parsed) ? 0 : Math.abs(parsed);
+        };
+        
+        const parseDate = (dateStr) => {
+          if (!dateStr || dateStr === '') return null;
+          try {
+            let date;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+              date = new Date(dateStr);
+            } else if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+              const [month, day, year] = dateStr.split('-');
+              date = new Date(year, month - 1, day);
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+              const [month, day, year] = dateStr.split('/');
+              date = new Date(year, month - 1, day);
+            } else {
+              date = new Date(dateStr);
+            }
+            return date && !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : null;
+          } catch {
+            return null;
+          }
+        };
 
         for (let i = 0; i < data.length; i++) {
           const row = data[i];
           try {
+            const debtorData = {
+              name: row['Debtor Name'] || 'Unknown Debtor',
+              email: row['Email'] || '',
+              phone: row['Phone'] || '',
+              address: row['Address'] || ''
+            };
+            
+            const debtor = await Debtor.create(debtorData);
+            
+            const originalBalance = parseBalance(row['Original Balance']);
+            const currentBalance = parseBalance(row['Current Balance']);
+            
             const debtData = {
               portfolio_id: selectedPortfolio,
-              vendor_id: selectedVendor,
-              scrub_method: scrubMethod,
-              debtor_name: row['Debtor Name'] || row['Name'] || '',
-              debtor_email: row['Email'] || '',
-              debtor_phone: row['Phone'] || '',
-              debtor_address: row['Address'] || '',
-              account_number: row['Account Number'] || row['Account'] || `ACC-${Date.now()}-${i}`,
-              original_balance: parseFloat(row['Original Balance'] || row['Balance'] || 0),
-              current_balance: parseFloat(row['Current Balance'] || row['Balance'] || 0),
-              original_creditor: row['Original Creditor'] || row['Creditor'] || '',
-              charge_off_date: row['Charge Off Date'] || '',
-              last_payment_date: row['Last Payment Date'] || '',
+              debtor_id: debtor.id,
+              debtor_name: row['Debtor Name'],
+              debtor_email: row['Email'],
+              debtor_phone: row['Phone'],
+              debtor_address: row['Address'],
+              account_number: row['Account Number'],
+              original_balance: originalBalance,
+              current_balance: currentBalance,
+              original_creditor: row['Original Creditor'],
+              charge_off_date: parseDate(row['Charge Off Date']),
+              last_payment_date: parseDate(row['Last Payment Date']),
               status: 'new',
-              priority: 'medium'
+              priority: 'medium',
+              notes: `Scrub Method: ${scrubMethod}`,
+              updated_date: new Date().toISOString()
             };
+            
+            console.log('Creating debt with data:', debtData);
+            
+            // Add vendor_id only if selected
+            if (selectedVendor) {
+              debtData.vendor_id = selectedVendor;
+            }
+            
+            if (originalBalance === 0 && currentBalance === 0) {
+              throw new Error('Both original and current balance cannot be zero');
+            }
 
-            await Case.create(debtData);
+            const createdCase = await Case.create(debtData);
+            console.log('Created case:', createdCase);
             results.success++;
           } catch (error) {
             results.errors.push(`Row ${i + 2}: ${error.message}`);
           }
         }
 
+        // Force refresh of localStorage to ensure new data is used
+        const mockData = JSON.parse(localStorage.getItem('ccai_mock_data') || '{}');
+        localStorage.setItem('ccai_mock_data', JSON.stringify(mockData));
+        
         setImportResults(results);
         toast.success(`Import completed! ${results.success} debts imported successfully`);
         if (results.errors.length > 0) {
           toast.warning(`${results.errors.length} rows had errors`);
         }
+        
+        // Trigger page reload to show new data
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
       };
       reader.readAsText(file);
     } catch (error) {
@@ -267,7 +322,7 @@ export default function DebtImport() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Vendor *</Label>
+                  <Label>Vendor (Optional)</Label>
                   <Select value={selectedVendor} onValueChange={setSelectedVendor}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select vendor" />
@@ -331,7 +386,7 @@ export default function DebtImport() {
           <div className="flex justify-end">
             <Button 
               onClick={handleImport} 
-              disabled={!file || !selectedPortfolio || !selectedVendor || !scrubMethod || isProcessing}
+              disabled={!file || !selectedPortfolio || !scrubMethod || isProcessing}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isProcessing ? (

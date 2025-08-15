@@ -32,7 +32,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
-import { format, isPast, differenceInDays } from "date-fns";
+import { format, isPast, differenceInDays, isValid, parseISO } from "date-fns";
 import ChatHistoryModal from "./ChatHistoryModal";
 import ActivityLogModal from "./ActivityLogModal";
 import usePermissions from '@/components/hooks/usePermissions';
@@ -57,6 +57,23 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false);
   const [portalLink, setPortalLink] = useState(null);
   const { canEdit, isAdmin } = usePermissions();
+
+  // Define debtor variables early to avoid undefined errors
+  const debtorName = debtor?.name || selectedCase?.debtor_name || 'Unknown Debtor';
+  const debtorEmail = debtor?.email || selectedCase?.debtor_email;
+  const debtorPhone = debtor?.phone || selectedCase?.debtor_phone;
+  const debtorAddress = debtor?.address || selectedCase?.debtor_address;
+
+  // Helper function to safely format dates
+  const formatDate = (dateValue) => {
+    if (!dateValue) return 'N/A';
+    try {
+      const date = typeof dateValue === 'string' ? parseISO(dateValue) : new Date(dateValue);
+      return isValid(date) ? format(date, 'MMM d, yyyy') : 'Invalid Date';
+    } catch {
+      return 'Invalid Date';
+    }
+  };
 
   React.useEffect(() => {
     const fetchTemplates = async () => {
@@ -191,10 +208,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
     }
   };
 
-  const debtorName = debtor?.name || selectedCase.debtor_name;
-  const debtorEmail = debtor?.email || selectedCase.debtor_email;
-  const debtorPhone = debtor?.phone || selectedCase.debtor_phone;
-  const debtorAddress = debtor?.address || selectedCase.debtor_address;
+
 
   const getPortfolioName = (portfolioId) => {
     const portfolio = portfolios.find(p => p.id === portfolioId);
@@ -206,8 +220,15 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
       return null;
     }
     const { status, close_date } = selectedCase.bankruptcy_details;
-    if (status === 'filed' && close_date && isPast(new Date(close_date))) {
-      return 'Discharged';
+    if (status === 'filed' && close_date) {
+      try {
+        const closeDate = typeof close_date === 'string' ? parseISO(close_date) : new Date(close_date);
+        if (isValid(closeDate) && isPast(closeDate)) {
+          return 'Discharged';
+        }
+      } catch (error) {
+        console.error('Error parsing bankruptcy close date:', error);
+      }
     }
     return status;
   };
@@ -215,11 +236,18 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
   const getCaseAge = () => {
     if (!selectedCase.charge_off_date) return null;
 
-    const chargeOffDate = new Date(selectedCase.charge_off_date);
-    const today = new Date();
-    const daysOld = differenceInDays(today, chargeOffDate);
-
-    return daysOld;
+    try {
+      const chargeOffDate = typeof selectedCase.charge_off_date === 'string' ? parseISO(selectedCase.charge_off_date) : new Date(selectedCase.charge_off_date);
+      if (!isValid(chargeOffDate)) return null;
+      
+      const today = new Date();
+      const daysOld = differenceInDays(today, chargeOffDate);
+      
+      return daysOld >= 0 ? daysOld : null;
+    } catch (error) {
+      console.error('Error calculating case age:', error);
+      return null;
+    }
   };
 
   const getAgeColor = (days) => {
@@ -289,13 +317,13 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                     {debtor?.created_at && (
                       <div>
                         <p className="text-sm font-medium text-gray-700">Created</p>
-                        <p className="text-gray-900">{format(new Date(debtor.created_at), 'MMM d, yyyy')}</p>
+                        <p className="text-gray-900">{formatDate(debtor.created_at)}</p>
                       </div>
                     )}
                   </div>
                 </DialogContent>
               </Dialog>
-              <p className="text-sm text-gray-500">Account: {selectedCase.account_number}</p>
+              <p className="text-sm text-gray-500">Account: {selectedCase.account_number || 'No Account Number'}</p>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -323,7 +351,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
             <Badge variant="outline">
               {selectedCase.priority} priority
             </Badge>
-            {caseAge !== null && (
+            {caseAge !== null && !isNaN(caseAge) && caseAge >= 0 && (
               <Badge className={`border ${getAgeColor(caseAge)} flex items-center gap-1`}>
                 <Clock className="w-3 h-3" />
                 {caseAge} days old
@@ -355,10 +383,19 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
 
           <div className="space-y-3">
             <h4 className="font-medium text-gray-900">Financial Details</h4>
-            {selectedCase.original_creditor && (
+            {selectedCase.original_creditor && selectedCase.original_creditor !== '' && (
                 <div className="text-sm bg-gray-50 p-3 rounded-lg">
                     <p className="text-xs text-gray-500">Original Creditor</p>
-                    <p className="font-medium text-gray-800">{selectedCase.original_creditor}</p>
+                    <p className="font-medium text-gray-800">
+                      {(() => {
+                        const creditor = selectedCase.original_creditor;
+                        // Check if it's a number (which would be wrong data)
+                        if (!isNaN(creditor) && !isNaN(parseFloat(creditor))) {
+                          return 'Unknown Creditor';
+                        }
+                        return creditor;
+                      })()}
+                    </p>
                     {selectedCase.original_creditor_address && (
                         <p className="text-gray-600">{selectedCase.original_creditor_address}</p>
                     )}
@@ -368,13 +405,23 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
               <div>
                 <p className="text-xs text-gray-500">Current Balance</p>
                 <p className="text-lg font-semibold text-red-600">
-                  ${selectedCase.current_balance?.toLocaleString() || 0}
+                  ${(() => {
+                    const balance = selectedCase.current_balance;
+                    if (balance === null || balance === undefined || isNaN(balance)) return '0';
+                    const displayBalance = balance < 0 ? Math.abs(balance) : balance;
+                    return displayBalance.toLocaleString();
+                  })()}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">Original Balance</p>
                 <p className="text-sm font-medium text-gray-900">
-                  ${selectedCase.original_balance?.toLocaleString() || 0}
+                  ${(() => {
+                    const balance = selectedCase.original_balance;
+                    if (balance === null || balance === undefined || isNaN(balance)) return '0';
+                    const displayBalance = balance < 0 ? Math.abs(balance) : balance;
+                    return displayBalance.toLocaleString();
+                  })()}
                 </p>
               </div>
             </div>
@@ -388,7 +435,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
             )}
           </div>
 
-          {caseAge !== null && (
+          {(caseAge !== null && !isNaN(caseAge) && caseAge >= 0) || selectedCase.charge_off_date ? (
             <div className="space-y-3">
               <h4 className="font-medium text-gray-900">Debt Timeline</h4>
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -396,11 +443,11 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                   <div>
                     <p className="text-sm font-medium text-gray-700">Days Since Charge Off</p>
                     <p className="text-xs text-gray-500">
-                      {selectedCase.charge_off_date && format(new Date(selectedCase.charge_off_date), 'MMM d, yyyy')}
+                      {selectedCase.charge_off_date && formatDate(selectedCase.charge_off_date)}
                     </p>
                   </div>
-                  <Badge className={`border ${getAgeColor(caseAge)} text-lg px-3 py-1`}>
-                    {caseAge} days
+                  <Badge className={`border ${caseAge !== null && !isNaN(caseAge) && caseAge >= 0 ? getAgeColor(caseAge) : 'bg-gray-100 text-gray-800 border-gray-200'} text-lg px-3 py-1`}>
+                    {caseAge !== null && !isNaN(caseAge) && caseAge >= 0 ? `${caseAge} days` : 'Invalid Date'}
                   </Badge>
                 </div>
                 <div className="mt-3">
@@ -418,7 +465,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                     <div
                       className="w-3 h-3 bg-gray-800 rounded-full mx-auto transform -translate-y-1"
                       style={{
-                        marginLeft: `${Math.min((caseAge / 180) * 100, 100)}%`,
+                        marginLeft: `${Math.min(((caseAge || 0) / 180) * 100, 100)}%`,
                         transform: 'translateX(-50%) translateY(-4px)'
                       }}
                     />
@@ -426,7 +473,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           {selectedCase.status === 'legal_action' && (
             <div className="space-y-3">
@@ -468,13 +515,13 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                   {selectedCase.bankruptcy_details.filing_date &&
                       <div className="flex items-center justify-between">
                           <p className="text-sm text-pink-800">Filing Date</p>
-                          <p className="text-sm font-medium text-pink-900">{format(new Date(selectedCase.bankruptcy_details.filing_date), 'MMM d, yyyy')}</p>
+                          <p className="text-sm font-medium text-pink-900">{formatDate(selectedCase.bankruptcy_details.filing_date)}</p>
                       </div>
                   }
                   {selectedCase.bankruptcy_details.close_date &&
                       <div className="flex items-center justify-between">
                           <p className="text-sm text-pink-800">Close Date</p>
-                          <p className="text-sm font-medium text-pink-900">{format(new Date(selectedCase.bankruptcy_details.close_date), 'MMM d, yyyy')}</p>
+                          <p className="text-sm font-medium text-pink-900">{formatDate(selectedCase.bankruptcy_details.close_date)}</p>
                       </div>
                   }
                   <div className="flex items-center justify-between">
@@ -505,7 +552,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                   {selectedCase.deceased_details.date_of_death &&
                       <div className="flex items-center justify-between">
                           <p className="text-sm text-slate-800">Date of Death</p>
-                          <p className="text-sm font-medium text-slate-900">{format(new Date(selectedCase.deceased_details.date_of_death), 'MMM d, yyyy')}</p>
+                          <p className="text-sm font-medium text-slate-900">{formatDate(selectedCase.deceased_details.date_of_death)}</p>
                       </div>
                   }
                   <div className="flex items-center justify-between">
@@ -557,7 +604,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                 <Calendar className="w-4 h-4 text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">Charge Off</p>
-                  <p className="text-sm">{format(new Date(selectedCase.charge_off_date), 'MMM d, yyyy')}</p>
+                  <p className="text-sm">{formatDate(selectedCase.charge_off_date)}</p>
                 </div>
               </div>
             )}
@@ -566,7 +613,7 @@ export default function DebtDetails({ selectedCase, portfolios, debtor, lawFirms
                 <CreditCard className="w-4 h-4 text-gray-400" />
                 <div>
                   <p className="text-xs text-gray-500">Last Payment</p>
-                  <p className="text-sm">{format(new Date(selectedCase.last_payment_date), 'MMM d, yyyy')}</p>
+                  <p className="text-sm">{formatDate(selectedCase.last_payment_date)}</p>
                 </div>
               </div>
             )}
