@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { Portfolio } from "@/api/entities";
+import { toast } from "sonner";
 import {
   Percent,
   CheckCircle,
   Scale,
   UserX,
   AlertTriangle,
-  DollarSign
+  DollarSign,
+  Trash2
 } from "lucide-react";
 
 const KpiItem = ({ icon: Icon, value, label, colorClass }) => (
@@ -20,24 +24,53 @@ const KpiItem = ({ icon: Icon, value, label, colorClass }) => (
   </div>
 );
 
-export default function PortfolioCard({ portfolio, stats }) {
+export default function PortfolioCard({ portfolio, stats, onDelete }) {
+  const [showDelete, setShowDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const typeColors = {
     spec: "bg-green-100 text-green-800",
     committed: "bg-yellow-100 text-yellow-800"
   };
 
+  const handleDelete = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!confirm(`Are you sure you want to delete "${portfolio.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await Portfolio.delete(portfolio.id);
+      toast.success('Portfolio deleted successfully');
+      onDelete?.(portfolio.id);
+    } catch (error) {
+      console.error('Error deleting portfolio:', error);
+      toast.error('Failed to delete portfolio');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <Link to={createPageUrl(`PortfolioDetails?id=${portfolio.id}`)}>
-      <Card className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <CardTitle className="text-lg font-bold text-gray-900 leading-tight">
-              {portfolio.name}
-            </CardTitle>
-            <Badge className={typeColors[portfolio.portfolio_type]}>
-              {portfolio.portfolio_type}
-            </Badge>
-          </div>
+    <div 
+      className="relative"
+      onMouseEnter={() => setShowDelete(true)}
+      onMouseLeave={() => setShowDelete(false)}
+    >
+      <Link to={createPageUrl(`PortfolioDetails?id=${portfolio.id}`)}>
+        <Card className="border-0 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <CardTitle className="text-lg font-bold text-gray-900 leading-tight">
+                {portfolio.name}
+              </CardTitle>
+              <Badge className={typeColors[portfolio.portfolio_type]}>
+                {portfolio.portfolio_type}
+              </Badge>
+            </div>
           <p className="text-sm text-gray-500 pt-1">{portfolio.original_creditor}</p>
         </CardHeader>
         <CardContent className="flex-grow flex flex-col justify-end">
@@ -72,6 +105,18 @@ export default function PortfolioCard({ portfolio, stats }) {
           </div>
         </CardContent>
       </Card>
-    </Link>
+      </Link>
+      {showDelete && (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="absolute top-2 right-2 z-10 opacity-90 hover:opacity-100"
+          onClick={handleDelete}
+          disabled={isDeleting}
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      )}
+    </div>
   );
 }

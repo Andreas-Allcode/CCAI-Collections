@@ -76,6 +76,15 @@ export default function Portfolios() {
     }
   };
 
+  const handlePortfolioDelete = (portfolioId) => {
+    setPortfolios(prev => prev.filter(p => p.id !== portfolioId));
+    setStats(prev => {
+      const newStats = { ...prev };
+      delete newStats[portfolioId];
+      return newStats;
+    });
+  };
+
   return (
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
@@ -119,6 +128,7 @@ export default function Portfolios() {
               key={portfolio.id}
               portfolio={portfolio}
               stats={stats[portfolio.id] || {}}
+              onDelete={handlePortfolioDelete}
             />
           ))
         ) : (

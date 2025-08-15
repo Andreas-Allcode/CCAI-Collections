@@ -5,11 +5,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, CheckCircle, AlertCircle, Loader2, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Portfolio, Vendor, Case } from '@/api/entities';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 export default function DebtImport() {
   const navigate = useNavigate();
@@ -71,6 +73,55 @@ export default function DebtImport() {
       setPreviewData(data.slice(0, 10)); // Show first 10 rows for preview
     };
     reader.readAsText(file);
+  };
+
+  const generateTemplate = (format = 'csv') => {
+    const templateData = [
+      {
+        'Debtor Name': 'John Doe',
+        'Email': 'john.doe@email.com',
+        'Phone': '555-1234',
+        'Address': '123 Main St, City, State 12345',
+        'Account Number': 'ACC-001',
+        'Original Balance': '2500.00',
+        'Current Balance': '2500.00',
+        'Original Creditor': 'City Hospital',
+        'Charge Off Date': '2024-01-01',
+        'Last Payment Date': '2023-12-15'
+      },
+      {
+        'Debtor Name': 'Jane Smith',
+        'Email': 'jane.smith@email.com',
+        'Phone': '555-5678',
+        'Address': '456 Oak Ave, Town, State 67890',
+        'Account Number': 'ACC-002',
+        'Original Balance': '1800.00',
+        'Current Balance': '1800.00',
+        'Original Creditor': 'Medical Center',
+        'Charge Off Date': '2023-12-15',
+        'Last Payment Date': '2023-11-30'
+      }
+    ];
+
+    if (format === 'xlsx') {
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Debt Import Template');
+      XLSX.writeFile(wb, 'debt_import_template.xlsx');
+    } else {
+      const csv = Papa.unparse(templateData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'debt_import_template.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+    
+    toast.success(`${format.toUpperCase()} template downloaded successfully!`);
   };
 
   const handleImport = async () => {
@@ -149,9 +200,21 @@ export default function DebtImport() {
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Debts
       </Button>
 
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Import Debts</h1>
-        <p className="text-gray-600 mt-1">Upload a CSV file to import multiple debt records</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Import Debts</h1>
+          <p className="text-gray-600 mt-1">Upload a CSV file to import multiple debt records</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => generateTemplate('csv')}>
+            <Download className="w-4 h-4 mr-2" />
+            Download CSV Template
+          </Button>
+          <Button variant="outline" onClick={() => generateTemplate('xlsx')}>
+            <Download className="w-4 h-4 mr-2" />
+            Download XLSX Template
+          </Button>
+        </div>
       </div>
 
       {!importResults ? (

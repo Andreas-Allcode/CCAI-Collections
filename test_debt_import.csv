@@ -1,0 +1,6 @@
+Debtor Name,Email,Phone,Address,Account Number,Original Balance,Current Balance,Original Creditor,Charge Off Date,Last Payment Date
+Michael Johnson,michael.johnson@email.com,555-9001,789 Pine St, Springfield, IL 62701,ACC-TEST-001,3500.00,3500.00,Springfield Medical,2024-01-15,2023-12-20
+Lisa Williams,lisa.williams@email.com,555-9002,321 Elm Dr, Chicago, IL 60601,ACC-TEST-002,2200.00,2200.00,Chicago General Hospital,2024-02-01,2024-01-10
+Robert Davis,robert.davis@email.com,555-9003,654 Maple Ave, Peoria, IL 61601,ACC-TEST-003,4800.00,4800.00,Peoria Health System,2023-11-30,2023-10-15
+Jennifer Brown,jennifer.brown@email.com,555-9004,987 Oak Blvd, Rockford, IL 61101,ACC-TEST-004,1750.00,1750.00,Rockford Medical Center,2024-01-20,2023-11-25
+David Wilson,david.wilson@email.com,555-9005,147 Cedar Ln, Naperville, IL 60540,ACC-TEST-005,5200.00,5200.00,Naperville Hospital,2023-12-10,2023-09-30
