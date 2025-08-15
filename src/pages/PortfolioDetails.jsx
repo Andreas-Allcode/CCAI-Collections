@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Portfolio, Case, Payment } from '@/api/entities';
+import { Portfolio, Case, Payment, Vendor } from '@/api/entities';
 import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,6 +27,7 @@ import {
   Tooltip as ChartTooltip,
 } from 'recharts';
 import { subDays, isAfter } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280'];
 
@@ -47,6 +48,8 @@ export default function PortfolioDetails() {
   const [casePaymentsMap, setCasePaymentsMap] = useState({});
   const [portfolioStats, setPortfolioStats] = useState({ totalCases: 0, totalCollected: 0, collectionRate: 0, paymentCount: 0 });
   const [statusDistribution, setStatusDistribution] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [selectedVendor, setSelectedVendor] = useState('none');
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState(initialFilters);
 
@@ -65,22 +68,63 @@ export default function PortfolioDetails() {
   const loadPortfolioDetails = async (id) => {
     setIsLoading(true);
     try {
-      const [portfolioData, allDebts, allPayments] = await Promise.all([
+      const [portfolioData, allDebts, allPayments, vendorList] = await Promise.all([
         Portfolio.get(id),
-        Case.filter({ portfolio_id: id }),
+        Case.list(),
         Payment.list(),
+        Vendor.list()
       ]);
+      
+      console.log('Loading portfolio details for ID:', id);
+      console.log('All cases from database:', allDebts.length);
+      console.log('Sample cases:', allDebts.slice(0, 3));
+      
+      // Combine and deduplicate debts from both sources
+      const mockData = JSON.parse(localStorage.getItem('ccai_mock_data') || '{}');
+      const localCases = mockData.cases || [];
+      const localPortfolioDebts = localCases.filter(debt => debt.portfolio_id === id);
+      
+      // Filter Supabase debts for this portfolio
+      const supabasePortfolioDebts = allDebts.filter(debt => debt.portfolio_id === id);
+      
+      // Use Map for better deduplication
+      const debtMap = new Map();
+      
+      // Add Supabase debts first (they take priority)
+      supabasePortfolioDebts.forEach(debt => {
+        debtMap.set(debt.id, debt);
+      });
+      
+      // Add local debts only if not already present
+      localPortfolioDebts.forEach(debt => {
+        if (!debtMap.has(debt.id)) {
+          debtMap.set(debt.id, debt);
+        }
+      });
+      
+      const allPortfolioDebts = Array.from(debtMap.values());
+      
+      console.log('Portfolio ID:', id, 'Supabase debts:', supabasePortfolioDebts.length, 'Local debts:', localPortfolioDebts.length, 'Total unique:', allPortfolioDebts.length);
+      console.log('Unique debt IDs:', allPortfolioDebts.map(d => d.id));
 
-      const portfolioPayments = allPayments.filter(p => allDebts.some(c => c.id === p.case_id) && p.status === 'completed');
+      const portfolioPayments = allPayments.filter(p => allPortfolioDebts.some(c => c.id === p.case_id) && p.status === 'completed');
       const totalCollected = portfolioPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
-      const collectionRate = portfolioData.total_face_value > 0 ? (totalCollected / portfolioData.total_face_value) * 100 : 0;
-      const totalCases = allDebts.length;
+      const totalFaceValue = allPortfolioDebts.reduce((sum, debt) => sum + (debt.original_balance || 0), 0);
+      const collectionRate = totalFaceValue > 0 ? (totalCollected / totalFaceValue) * 100 : 0;
+      const totalCases = allPortfolioDebts.length;
       const paymentCount = portfolioPayments.length;
 
-      const statusCounts = allDebts.reduce((acc, curr) => {
+      const statusCounts = allPortfolioDebts.reduce((acc, curr) => {
         acc[curr.status] = (acc[curr.status] || 0) + 1;
         return acc;
       }, {});
+      
+      // Update portfolio with calculated values
+      const updatedPortfolioData = {
+        ...portfolioData,
+        account_count: totalCases,
+        total_face_value: totalFaceValue
+      };
 
       const statusChartData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
 
@@ -95,14 +139,9 @@ export default function PortfolioDetails() {
         }, {});
       setCasePaymentsMap(newCasePaymentsMap);
       
-      // Ensure litigation_eligible exists for display, even if not directly returned by mock entity
-      const processedPortfolioData = {
-        ...portfolioData,
-        litigation_eligible: portfolioData.litigation_eligible !== undefined ? portfolioData.litigation_eligible : true, // Default to true for demo
-      };
-
-      setPortfolio(processedPortfolioData);
-      setDebts(allDebts);
+      setPortfolio(updatedPortfolioData);
+      setDebts(allPortfolioDebts);
+      setVendors(vendorList || []);
       setPortfolioStats({ totalCases, totalCollected, collectionRate, paymentCount });
       setStatusDistribution(statusChartData);
     } catch (error) {
@@ -237,7 +276,20 @@ export default function PortfolioDetails() {
           <h1 className="text-3xl font-bold text-gray-900">{portfolio.name}</h1>
           <p className="text-gray-600 mt-1">{portfolio.original_creditor}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <Select value={selectedVendor} onValueChange={setSelectedVendor}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Select Vendor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Vendor</SelectItem>
+              {vendors.map(vendor => (
+                <SelectItem key={vendor.id} value={vendor.id}>
+                  {vendor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Export Debts

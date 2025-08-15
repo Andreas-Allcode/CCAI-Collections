@@ -125,7 +125,8 @@ export default function DebtTable({
                                 <TableCell>{getPortfolioName(case_.portfolio_id)}</TableCell>
                                 <TableCell>
                                     ${(() => {
-                                        const balance = case_.current_balance;
+                                        // Try current_balance first, then original_balance as fallback
+                                        const balance = case_.current_balance || case_.original_balance;
                                         if (balance === null || balance === undefined || isNaN(balance)) {
                                             return '0';
                                         }

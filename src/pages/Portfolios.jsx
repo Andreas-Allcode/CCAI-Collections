@@ -28,7 +28,28 @@ export default function Portfolios() {
       ]);
       
       const portfolioList = portfolioListRes || [];
-      const cases = casesRes || [];
+      
+      // Combine and deduplicate cases from Supabase and localStorage
+      const mockData = JSON.parse(localStorage.getItem('ccai_mock_data') || '{}');
+      const localCases = mockData.cases || [];
+      
+      // Use Map for deduplication
+      const caseMap = new Map();
+      
+      // Add Supabase cases first (they take priority)
+      (casesRes || []).forEach(case_ => {
+        caseMap.set(case_.id, case_);
+      });
+      
+      // Add local cases only if not already present
+      localCases.forEach(case_ => {
+        if (!caseMap.has(case_.id)) {
+          caseMap.set(case_.id, case_);
+        }
+      });
+      
+      const cases = Array.from(caseMap.values());
+      console.log('Portfolios page - Supabase cases:', (casesRes || []).length, 'Local cases:', localCases.length, 'Total unique:', cases.length);
       const payments = paymentsRes || [];
 
       const portfolioStats = {};

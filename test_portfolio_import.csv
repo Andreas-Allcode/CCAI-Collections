@@ -1,0 +1,8 @@
+Portfolio Name,Client,Original Creditor,Portfolio Type,Portfolio Category,Litigation Eligible,Debtor Name,Email,Phone,Address,Account Number,Original Balance,Current Balance,Charge Off Date,Last Payment Date,Status,Priority,Scrub Method
+Q1 2024 Medical Portfolio,MedCorp LLC,City Hospital,committed,purchased,true,John Smith,john.smith@email.com,555-0101,123 Main St City ST 12345,MED001,2500.00,2500.00,2024-01-01,2023-12-15,new,medium,experian
+Q1 2024 Medical Portfolio,MedCorp LLC,City Hospital,committed,purchased,true,Jane Doe,jane.doe@email.com,555-0102,456 Oak Ave City ST 12345,MED002,1800.00,1800.00,2023-12-15,2023-11-20,new,high,rnn
+Q1 2024 Medical Portfolio,MedCorp LLC,City Hospital,committed,purchased,true,Robert Wilson,robert.wilson@email.com,555-0103,789 Pine St City ST 12345,MED003,3200.00,3200.00,2023-11-01,2023-10-15,new,medium,tlo
+Credit Card Portfolio B,FinanceFirst LLC,National Bank,spec,purchased,false,Alice Brown,alice.brown@email.com,555-0104,321 Elm St City ST 12345,CC001,4500.00,4500.00,2023-10-01,2023-09-20,new,high,experian
+Credit Card Portfolio B,FinanceFirst LLC,National Bank,spec,purchased,false,Michael Davis,michael.davis@email.com,555-0105,654 Maple Ave City ST 12345,CC002,2800.00,2800.00,2023-09-15,2023-08-30,new,medium,rnn
+Auto Loan Portfolio C,AutoCredit LLC,Car Finance Co,committed,purchased,true,Sarah Johnson,sarah.johnson@email.com,555-0106,987 Cedar Rd City ST 12345,AUTO001,15000.00,15000.00,2023-08-01,2023-07-15,new,high,tlo
+Auto Loan Portfolio C,AutoCredit LLC,Car Finance Co,committed,purchased,true,David Miller,david.miller@email.com,555-0107,147 Birch Ln City ST 12345,AUTO002,12500.00,12500.00,2023-07-20,2023-06-25,new,medium,experian

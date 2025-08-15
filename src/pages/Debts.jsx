@@ -58,7 +58,29 @@ export default function Debts() {
         Payment.list()
       ]);
 
-      setCases(caseData || []);
+      // Combine and deduplicate cases from Supabase and localStorage
+      const mockData = JSON.parse(localStorage.getItem('ccai_mock_data') || '{}');
+      const localCases = mockData.cases || [];
+      
+      // Use Map for deduplication
+      const caseMap = new Map();
+      
+      // Add Supabase cases first (they take priority)
+      (caseData || []).forEach(case_ => {
+        caseMap.set(case_.id, case_);
+      });
+      
+      // Add local cases only if not already present
+      localCases.forEach(case_ => {
+        if (!caseMap.has(case_.id)) {
+          caseMap.set(case_.id, case_);
+        }
+      });
+      
+      const allCases = Array.from(caseMap.values());
+      console.log('Debts page - Supabase cases:', (caseData || []).length, 'Local cases:', localCases.length, 'Total unique:', allCases.length);
+      
+      setCases(allCases);
       setPortfolios(portfolioData || []);
       setVendors(vendorData || []);
       setDebtors(debtorData || []);
@@ -152,12 +174,30 @@ export default function Debts() {
     
     try {
       if (newStatus === 'deleted') {
-        // Handle deletion
+        // Handle deletion from both Supabase and localStorage
         await Case.delete(caseId);
         
-        // Refresh the cases list
-        const updatedCases = await Case.list('-updated_date');
-        setCases(updatedCases || []);
+        // Also remove from localStorage
+        const mockData = JSON.parse(localStorage.getItem('ccai_mock_data') || '{}');
+        if (mockData.cases) {
+          mockData.cases = mockData.cases.filter(c => c.id !== caseId);
+          localStorage.setItem('ccai_mock_data', JSON.stringify(mockData));
+        }
+        
+        // Refresh the cases list with deduplication
+        const supabaseCases = await Case.list('-updated_date');
+        const localCases = mockData.cases || [];
+        
+        // Deduplicate
+        const caseMap = new Map();
+        (supabaseCases || []).forEach(case_ => caseMap.set(case_.id, case_));
+        localCases.forEach(case_ => {
+          if (!caseMap.has(case_.id)) {
+            caseMap.set(case_.id, case_);
+          }
+        });
+        
+        setCases(Array.from(caseMap.values()));
         
         // Clear selected case if it was the deleted one
         if (selectedCase && selectedCase.id === caseId) {
@@ -173,8 +213,29 @@ export default function Debts() {
         // Handle status update
         await Case.update(caseId, { status: newStatus });
 
-        const updatedCases = await Case.list('-updated_date');
-        setCases(updatedCases || []);
+        // Also update in localStorage if present
+        const mockData = JSON.parse(localStorage.getItem('ccai_mock_data') || '{}');
+        if (mockData.cases) {
+          const caseIndex = mockData.cases.findIndex(c => c.id === caseId);
+          if (caseIndex >= 0) {
+            mockData.cases[caseIndex].status = newStatus;
+            localStorage.setItem('ccai_mock_data', JSON.stringify(mockData));
+          }
+        }
+
+        // Refresh with deduplication
+        const supabaseCases = await Case.list('-updated_date');
+        const localCases = mockData.cases || [];
+        
+        const caseMap = new Map();
+        (supabaseCases || []).forEach(case_ => caseMap.set(case_.id, case_));
+        localCases.forEach(case_ => {
+          if (!caseMap.has(case_.id)) {
+            caseMap.set(case_.id, case_);
+          }
+        });
+        
+        setCases(Array.from(caseMap.values()));
 
         if (selectedCase && selectedCase.id === caseId) {
           const newlyUpdatedCase = (updatedCases || []).find(c => c.id === caseId);
